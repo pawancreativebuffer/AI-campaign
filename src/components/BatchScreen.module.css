@@ -1,0 +1,175 @@
+.container {
+  padding: 24px;
+  background-color: #f9fafb;
+  min-height: calc(100vh - 100px);
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.dropdown {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background-color: white;
+  min-width: 150px;
+  color: #333;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchInput {
+  padding: 8px 36px 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  width: 250px;
+  outline: none;
+}
+
+.searchIcon {
+  position: absolute;
+  right: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.createBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #2eac6d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.createBtn:hover {
+  background-color: #26915b;
+}
+
+.batchList {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.batchCard {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #e9ecef;
+  padding: 12px 16px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.batchName {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 16px;
+}
+
+.statusGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.dotGrey {
+  color: #6b7280;
+  margin-left: 4px;
+}
+
+.statusSent {
+  color: #2eac6d;
+}
+
+.dotGreen {
+  color: #2eac6d;
+  margin-left: 4px;
+}
+
+.cardBody {
+  display: flex;
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.colDate {
+  flex: 2;
+}
+
+.col {
+  flex: 1;
+}
+
+.label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.valuePink {
+  color: #ec407a;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.cardNotes {
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.notesText {
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.cardFooter {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.viewBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #2d2a45;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.viewBtn:hover {
+  background-color: #1a1829;
+}

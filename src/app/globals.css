@@ -1,0 +1,57 @@
+:root {
+  --primary-pink: #eb2771;
+  --primary-pink-hover: #d21d60;
+  --primary-pink-light: #f7dbe6;
+  --secondary-bg: #f3f4f6;
+  /* Sub-header background */
+  --text-dark: #333333;
+  --text-muted: #6b7280;
+  --success-green: #5CB85C;
+  --success-green-hover: #4cae4c;
+  --border-color: #e5e7eb;
+  --bg-white: #ffffff;
+  --card-bg: #ffffff;
+  --btn-danger: #ef4444;
+  --btn-send: #f87171;
+  --btn-dark: #1f2937;
+  
+  /* Spacing Variables */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 40px;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f9fafb;
+  /* Light body background, slightly darker than white */
+  color: var(--text-dark);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+ul {
+  list-style: none;
+}

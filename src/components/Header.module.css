@@ -1,0 +1,99 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--primary-pink);
+  color: white;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  height: 60px;
+}
+
+.left, .right {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.right {
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: -0.5px;
+  background-color: #2b2b2b; /* Approximation from the image, Ticket IT logo is in a dark box with rounded corners */
+  padding: 0.2rem 0.8rem;
+  border-radius: 20px;
+  color: white;
+}
+
+.iconButton {
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconButtonAction {
+  background-color: white;
+  color: var(--text-dark);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.userText {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+
+.userName {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.userRole {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.profileImage {
+  width: 36px;
+  height: 36px;
+  background-color: white;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.imgPlaceholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-color: #e5e7eb;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+}

@@ -1,0 +1,115 @@
+.card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin: 0 1.5rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: #f1f3f8; /* Slightly darker than card body */
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 4px 4px 0 0;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary-pink);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--primary-pink);
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dataSection {
+  display: flex;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dataColumn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dataColumn:first-child {
+  flex: 2;
+}
+
+.dataLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.dataValue {
+  font-size: 0.85rem;
+  color: var(--primary-pink);
+  font-weight: 600;
+}
+
+.notesSection {
+  padding: 1.5rem;
+  min-height: 80px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+}
+
+.footerRight {
+  display: flex;
+  gap: 1rem;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+  transition: opacity 0.2s ease;
+}
+
+.actionBtn:hover {
+  opacity: 0.9;
+}
+
+.btnDelete {
+  background-color: var(--primary-pink);
+}
+
+.btnSend {
+  background-color: var(--btn-send);
+}
+
+.btnView {
+  background-color: var(--btn-dark);
+}

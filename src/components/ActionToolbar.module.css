@@ -1,0 +1,94 @@
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+}
+
+.left, .right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.selectWrapper {
+  position: relative;
+  display: inline-block;
+  width: 200px;
+}
+
+.select {
+  width: 100%;
+  appearance: none;
+  background-color: white;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.6rem 2rem 0.6rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text-dark);
+  outline: none;
+  cursor: pointer;
+}
+
+.select:focus {
+  border-color: var(--primary-pink);
+}
+
+.chevron {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #9ca3af;
+  pointer-events: none;
+}
+
+.searchWrapper {
+  position: relative;
+  display: inline-block;
+  width: 300px;
+}
+
+.searchInput {
+  width: 100%;
+  background-color: white;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.6rem 2.5rem 0.6rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text-dark);
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: var(--primary-pink);
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  right: 0.8rem;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.createButton {
+  background-color: var(--success-green);
+  color: white;
+  border-radius: 4px;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.createButton:hover {
+  background-color: var(--success-green-hover);
+}

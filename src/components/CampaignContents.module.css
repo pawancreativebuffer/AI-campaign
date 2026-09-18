@@ -1,0 +1,241 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.breadcrumb {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.titleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.goBackBtn {
+  background-color: #ec407a;
+  border: none;
+  border-radius: 4px 0 0 4px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.goBackBtn:hover {
+  background-color: #d81b60;
+}
+
+.updateDataBtn {
+  background-color: #2b2b40;
+  color: white;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.topActions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.actionBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+.actionBtn .iconWrapper {
+  background: white;
+  color: #333;
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnBatch { background-color: #55c478; }
+.btnAdhoc { background-color: #ff7575; }
+.btnUpload { background-color: #2b2b40; }
+.btnDam { background-color: #f5317f; }
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 32px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px 16px;
+  background-color: #e9ecef;
+  color: #111827;
+  font-weight: 700;
+  border-bottom: 1px solid #d1d5db;
+}
+.thContent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.table td {
+  padding: 8px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+  color: #1f2937;
+}
+
+.inputControl {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 6px 12px;
+  width: 100%;
+  max-width: 150px;
+  outline: none;
+}
+
+.previewThumb {
+  width: 60px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.previewContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.hoverPreview {
+  display: none;
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  transform: translateY(-50%);
+  margin-right: 16px;
+  background: white;
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+  border: 1px solid #e5e7eb;
+  z-index: 100;
+}
+
+.previewContainer:hover .hoverPreview {
+  display: block;
+}
+
+.hoverPreview img {
+  width: 320px;
+  height: auto;
+  border-radius: 4px;
+  display: block;
+}
+
+.videoPreview {
+  width: 60px;
+  height: 40px;
+  background-color: #000;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 10px;
+}
+
+.deleteBtn {
+  background-color: #ff3b6a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.deleteBtn:hover {
+  background-color: #e52856;
+}
+
+.footerActions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 32px;
+  padding-bottom: 40px;
+}
+
+.viewDetailBtn {
+  background-color: #2b2b40;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.updateCampaignBtn {
+  background-color: #55c478;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

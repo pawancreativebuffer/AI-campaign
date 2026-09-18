@@ -1,0 +1,46 @@
+.subHeader {
+  background-color: var(--secondary-bg);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 var(--spacing-lg);
+}
+
+.tabList {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xl);
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.tabList::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.tab {
+  padding: var(--spacing-md) 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4b5563;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.tab:hover {
+  color: var(--primary-pink);
+}
+
+.tab.active {
+  color: var(--primary-pink);
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: var(--primary-pink);
+}
