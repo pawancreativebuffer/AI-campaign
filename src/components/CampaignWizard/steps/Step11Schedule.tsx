@@ -165,7 +165,7 @@ const Step11Schedule: React.FC<StepProps> = ({ draft, goToStep }) => {
             <span className={local.alertTitle}>
               {failed} check(s) failed - the campaign cannot be scheduled yet.
             </span>{' '}
-            Fix the failed checks above, then return to this screen and confirm with the &quot;Create and Schedule
+            Fix the failed checks above, then return to this step and confirm with the &quot;Create and Schedule
             Campaign&quot; button below.
           </div>
         </div>

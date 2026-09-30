@@ -1,5 +1,7 @@
 import { DEVICES, ESL_COLOUR_LABELS, PRODUCT_CATALOG, STORES, TEMPLATES } from './mockData';
+import { DATA_SOURCES } from './options';
 import type {
+  CampaignBrief,
   CampaignDraft,
   ContentFormat,
   Device,
@@ -34,9 +36,12 @@ export function createEmptyDraft(): CampaignDraft {
     media: '',
     deviceIds: [],
     brief: {
+      dataSources: [],
+      dataFile: null,
       dataToAnalyse: [],
       productSource: '',
       productSourceDetail: '',
+      productFile: null,
       externalFactors: [],
       contentRequired: [],
       additionalRules: [],
@@ -46,6 +51,17 @@ export function createEmptyDraft(): CampaignDraft {
     templateSelections: {},
     contentGenerated: false,
   };
+}
+
+/** The "data to analyse" types the selected data sources can actually supply. */
+export function getAvailableDataTypes(brief: Pick<CampaignBrief, 'dataSources' | 'dataFile'>): string[] {
+  const types = new Set<string>();
+  for (const source of DATA_SOURCES) {
+    if (!brief.dataSources.includes(source.value)) continue;
+    const provides = source.value === 'upload' ? (brief.dataFile?.provides ?? []) : source.provides;
+    provides.forEach(type => types.add(type));
+  }
+  return Array.from(types);
 }
 
 export function mediaIncludes(media: MediaChoice, type: DeviceMedia): boolean {

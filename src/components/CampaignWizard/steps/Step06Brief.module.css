@@ -105,3 +105,156 @@
   border-radius: 50%;
   background-color: var(--primary-pink);
 }
+
+.subLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 10px;
+}
+
+.subLabelSpaced {
+  margin-top: 22px;
+}
+
+.sourceCards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sourceCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: white;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.sourceCard:hover {
+  border-color: #d1d5db;
+}
+
+.sourceCardSelected,
+.sourceCardSelected:hover {
+  border-color: var(--primary-pink);
+  background-color: rgba(235, 39, 113, 0.03);
+}
+
+.sourceCheck {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  border: 1px solid #9ca3af;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white;
+}
+
+.sourceCardSelected .sourceCheck {
+  background-color: var(--primary-pink);
+  border-color: var(--primary-pink);
+}
+
+.sourceText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sourceName {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2b2b36;
+}
+
+.sourceDescription {
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.45;
+}
+
+.sourceProvides {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.chipDisabled,
+.chipDisabled:hover {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: #d1d5db;
+}
+
+.uploadBox {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  background-color: #fafbfc;
+}
+
+.uploadRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.uploadBtn {
+  cursor: pointer;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.uploadFile {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #15803d;
+}
+
+.uploadFile span {
+  color: #2b2b36;
+}
+
+.uploadWarning {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #92400e;
+}
+
+.linkBtn {
+  font-size: 13px;
+  color: var(--primary-pink);
+  text-decoration: underline;
+}
+
+@media (max-width: 1100px) {
+  .sourceCards {
+    grid-template-columns: 1fr;
+  }
+}

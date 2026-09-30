@@ -160,3 +160,13 @@
   background-color: #dcfce7;
   border-color: #86efac;
 }
+
+.sourceNote {
+  margin: -8px 0 18px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background-color: #f3f5f8;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.5;
+}

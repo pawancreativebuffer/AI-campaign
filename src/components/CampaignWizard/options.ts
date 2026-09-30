@@ -27,12 +27,37 @@ export const DATA_TO_ANALYSE = [
   'Regional demand',
 ];
 
+/** Where the data to analyse comes from. The specification lists the data but not its source. */
+export const DATA_SOURCES = [
+  {
+    value: 'pos',
+    label: 'Ticket-IT POS',
+    description: 'Sales, margin, stock and promotions from the POS integration.',
+    provides: ['Sales', 'Margin', 'Stock', 'Promotions'],
+  },
+  {
+    value: '11ants',
+    label: '11ANTS',
+    description: 'Loyalty, basket and regional demand from retail intelligence.',
+    provides: ['Loyalty', 'Basket relationships', 'Regional demand'],
+  },
+  {
+    value: 'upload',
+    label: 'Excel upload',
+    description: 'Your own file with weekly units, margin or stock by SKU.',
+    provides: [] as string[], // depends on the columns in the uploaded file
+  },
+];
+
+export const UPLOADED_PRODUCT_SOURCE = 'Uploaded product list';
+
 export const PRODUCT_SOURCES = [
   'AI recommendations',
   'Category',
   'Supplier',
   'Brand',
   'User-selected products',
+  UPLOADED_PRODUCT_SOURCE,
 ];
 
 export const EXTERNAL_FACTORS = [

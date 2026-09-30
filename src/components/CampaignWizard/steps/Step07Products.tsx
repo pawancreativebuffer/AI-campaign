@@ -6,10 +6,12 @@ import { PRODUCT_CATALOG } from '../mockData';
 import { formatCurrency } from '../helpers';
 import { AlertIcon, CheckIcon, CloseIcon, PlusIcon, RefreshIcon, SearchIcon, SparkleIcon, TrashIcon } from '../icons';
 import type { CampaignProduct, CatalogProduct, StepProps } from '../types';
+import { describeDataSources, describeProductSource } from './promptBuilder';
 import {
   CATALOG_BY_SKU,
   createUserProduct,
   formatNumber,
+  getCatalogProduct,
   recommendProducts,
   savingAmount,
   savingPct,
@@ -144,6 +146,10 @@ const Step07Products: React.FC<StepProps> = ({ draft, update, errors, showErrors
         Review the products recommended from your campaign brief. Approve, remove or replace each one, or add products
         yourself. Only approved products are used to generate content.
       </p>
+      <div className={local.sourceNote}>
+        <strong>Data source:</strong> {describeDataSources(draft.brief)} | <strong>Products:</strong>{' '}
+        {describeProductSource(draft.brief)}
+      </div>
 
       {errorAlert}
 
@@ -152,7 +158,7 @@ const Step07Products: React.FC<StepProps> = ({ draft, update, errors, showErrors
           <AlertIcon />
           <div>
             No products matched the campaign brief. Relax the additional rules or the product selection on the{' '}
-            Campaign Brief screen, or add products manually below.{' '}
+            Campaign Brief step, or add products manually below.{' '}
             <button type="button" className={styles.btnOutline} onClick={() => goToStep(6)}>
               Edit brief
             </button>
@@ -230,7 +236,7 @@ const Step07Products: React.FC<StepProps> = ({ draft, update, errors, showErrors
               </thead>
               <tbody>
                 {products.map(product => {
-                  const catalog = CATALOG_BY_SKU.get(product.sku);
+                  const catalog = getCatalogProduct(product.sku, draft);
                   const contentTypes = baseContentTypes.includes(product.contentType)
                     ? baseContentTypes
                     : [product.contentType, ...baseContentTypes];

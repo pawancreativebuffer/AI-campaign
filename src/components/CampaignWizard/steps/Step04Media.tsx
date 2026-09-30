@@ -83,7 +83,7 @@ const Step04Media: React.FC<StepProps> = ({ draft, update, errors, showErrors, g
   return (
     <div>
       <p className={styles.sectionIntro}>
-        Choose where this campaign will be shown. The devices you can pick on the next screen depend on this choice.
+        Choose where this campaign will be shown. The devices you can pick on the next step depend on this choice.
       </p>
 
       {storeCount === 0 && (

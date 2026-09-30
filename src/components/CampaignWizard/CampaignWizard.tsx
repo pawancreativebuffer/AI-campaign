@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import styles from './wizard.module.css';
 import { WIZARD_STEPS } from './options';
 import { applyDraftPatch, createEmptyDraft } from './helpers';
-import { getStepErrors, runScheduleValidation } from './validation';
+import { VALIDATION_ENABLED, getStepErrors, runScheduleValidation } from './validation';
 import { saveCampaign } from './campaignStore';
 import { ArrowLeftIcon, ArrowRightIcon, CheckIcon } from './icons';
 import type { CampaignDraft, StepProps } from './types';
@@ -96,7 +96,7 @@ const CampaignWizard: React.FC = () => {
       showStep(invalid, true);
       return;
     }
-    if (runScheduleValidation(draft).some(check => check.status === 'fail')) {
+    if (VALIDATION_ENABLED && runScheduleValidation(draft).some(check => check.status === 'fail')) {
       setScheduleBlocked(true);
       return;
     }
@@ -131,7 +131,7 @@ const CampaignWizard: React.FC = () => {
         <div className={styles.wizardHeader}>
           <span className={styles.wizardTitle}>{current.title}</span>
           <span className={styles.wizardStepCount}>
-            Screen {step} of {LAST_STEP}
+            Step {step} of {LAST_STEP}
           </span>
         </div>
 

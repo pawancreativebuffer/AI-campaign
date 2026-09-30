@@ -92,10 +92,40 @@ export interface ContentFormat {
   deviceCount: number;
 }
 
+export interface UploadedDataRow {
+  sku: string;
+  weeklyUnits?: number;
+  marginPct?: number;
+  stockOnHand?: number;
+}
+
+/** Supplemental retail data read from an uploaded Excel / CSV file. */
+export interface UploadedData {
+  fileName: string;
+  rows: UploadedDataRow[]; // rows whose SKU is in the catalog
+  provides: string[]; // which "data to analyse" types the file's columns cover
+  unmatched: string[]; // SKUs in the file that are not in the catalog
+}
+
+export interface UploadedProductRow {
+  sku: string;
+  promoPrice?: number;
+}
+
+/** A product list read from an uploaded Excel / CSV file. */
+export interface UploadedProductList {
+  fileName: string;
+  rows: UploadedProductRow[];
+  unmatched: string[];
+}
+
 export interface CampaignBrief {
+  dataSources: string[]; // DATA_SOURCES values: where the data to analyse comes from
+  dataFile: UploadedData | null; // used when the 'upload' source is selected
   dataToAnalyse: string[];
   productSource: string;
   productSourceDetail: string; // category / supplier / brand name when relevant
+  productFile: UploadedProductList | null; // used when productSource is the uploaded list
   externalFactors: string[];
   contentRequired: string[];
   additionalRules: string[]; // short sentences

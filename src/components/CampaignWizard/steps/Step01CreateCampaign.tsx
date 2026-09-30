@@ -95,7 +95,7 @@ const Step01CreateCampaign: React.FC<StepProps> = ({ draft, update, errors, show
       <div className={styles.alert}>
         <span>
           The campaign is saved initially as a <strong>Draft</strong> when you continue. Nothing is sent to stores
-          until it is scheduled on the final screen.
+          until it is scheduled on the final step.
         </span>
       </div>
     </div>

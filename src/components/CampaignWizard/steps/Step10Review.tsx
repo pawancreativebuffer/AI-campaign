@@ -16,6 +16,7 @@ import {
 } from '../helpers';
 import { runScheduleValidation } from '../validation';
 import { AlertIcon, CheckIcon, EditIcon } from '../icons';
+import { describeDataSources } from './promptBuilder';
 import type { DeviceStatus, StepProps } from '../types';
 
 const STATUS_BADGE: Record<DeviceStatus, string> = {
@@ -98,7 +99,7 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
   return (
     <div>
       <p className={styles.sectionIntro}>
-        Check the complete campaign before scheduling. Use Edit to go back to any screen and change it.
+        Check the complete campaign before scheduling. Use Edit to go back to any step and change it.
       </p>
 
       {issues.length === 0 ? (
@@ -210,6 +211,7 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
 
       <Section title="Campaign brief" step={6} onEdit={goToStep}>
         <div className={styles.infoGrid}>
+          <Info label="Data source">{describeDataSources(brief)}</Info>
           <Info label="Data to analyse">{listOrDash(brief.dataToAnalyse)}</Info>
           <Info label="Products to consider">{productSource || '-'}</Info>
           <Info label="External factors">{listOrDash(brief.externalFactors)}</Info>

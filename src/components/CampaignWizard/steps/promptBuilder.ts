@@ -1,5 +1,5 @@
 import { REGIONS, STORES, STORE_FORMATS } from '../mockData';
-import { ESL_MAX_CHANGES_PER_DAY } from '../options';
+import { DATA_SOURCES, ESL_MAX_CHANGES_PER_DAY, UPLOADED_PRODUCT_SOURCE } from '../options';
 import {
   formatDateTime,
   formatTime12,
@@ -36,10 +36,26 @@ export function describeProductSource(brief: CampaignBrief): string {
   if (sourceNeedsDetail(brief.productSource)) {
     return `${brief.productSource}: ${brief.productSourceDetail || 'not specified'}`;
   }
+  if (brief.productSource === UPLOADED_PRODUCT_SOURCE) {
+    return brief.productFile
+      ? `Uploaded product list "${brief.productFile.fileName}" (${plural(brief.productFile.rows.length, 'product')}); rank these and do not add others`
+      : 'Uploaded product list (no file uploaded)';
+  }
   if (brief.productSource === 'User-selected products') {
     return 'User-selected products only (do not recommend additional products)';
   }
   return 'AI recommendations across the full product range';
+}
+
+/** e.g. 'Ticket-IT POS, Excel upload "sales.xlsx" (12 SKUs)' */
+export function describeDataSources(brief: CampaignBrief): string {
+  const names = DATA_SOURCES.filter(source => brief.dataSources.includes(source.value)).map(source => {
+    if (source.value !== 'upload') return source.label;
+    return brief.dataFile
+      ? `${source.label} "${brief.dataFile.fileName}" (${plural(brief.dataFile.rows.length, 'SKU')})`
+      : `${source.label} (no file uploaded)`;
+  });
+  return names.length > 0 ? names.join(', ') : 'Not specified';
 }
 
 function listOrNone(values: string[], none = 'None selected'): string {
@@ -130,6 +146,7 @@ export function buildCampaignPrompt(draft: CampaignDraft): string {
   section('CAMPAIGN BRIEF');
   lines.push(`1. Campaign objective: ${draft.objective || 'Not specified'}`);
   lines.push(`2. Data to analyse: ${listOrNone(brief.dataToAnalyse)}`);
+  lines.push(`   Data source: ${describeDataSources(brief)}`);
   lines.push(`3. Products to consider: ${describeProductSource(brief)}`);
   lines.push(`4. External factors: ${listOrNone(brief.externalFactors, 'None')}`);
   lines.push(`5. Content required: ${listOrNone(brief.contentRequired)}`);

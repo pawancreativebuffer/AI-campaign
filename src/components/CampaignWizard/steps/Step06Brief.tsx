@@ -3,16 +3,20 @@ import styles from '../wizard.module.css';
 import local from './Step06Brief.module.css';
 import {
   CONTENT_TYPES,
+  DATA_SOURCES,
   DATA_TO_ANALYSE,
   EXTERNAL_FACTORS,
   OBJECTIVES,
   PRODUCT_SOURCES,
+  UPLOADED_PRODUCT_SOURCE,
 } from '../options';
 import { PRODUCT_BRANDS, PRODUCT_CATEGORIES, PRODUCT_SUPPLIERS } from '../mockData';
-import { toggleValue } from '../helpers';
+import { getAvailableDataTypes, toggleValue } from '../helpers';
 import { AlertIcon, CheckIcon, EditIcon, EyeIcon, PlusIcon, RefreshIcon, SparkleIcon, TrashIcon } from '../icons';
+import { VALIDATION_ENABLED } from '../validation';
 import type { CampaignBrief, StepProps } from '../types';
-import { buildCampaignPrompt, cleanRules, describeProductSource, sourceNeedsDetail } from './promptBuilder';
+import { buildCampaignPrompt, cleanRules, describeDataSources, describeProductSource, sourceNeedsDetail } from './promptBuilder';
+import { downloadCsv, parseDataFile, parseProductFile, sampleDataCsv, sampleProductCsv } from './fileImport';
 
 const RULE_MAX_LENGTH = 120;
 const MAX_RULES = 8;
@@ -30,25 +34,136 @@ const DETAIL_OPTIONS: Record<string, string[]> = {
   Brand: PRODUCT_BRANDS,
 };
 
+interface UploadBoxProps {
+  id: string;
+  fileName: string | null;
+  summary: string;
+  unmatched: string[];
+  error: string;
+  busy: boolean;
+  onFile: (file: File) => void;
+  onRemove: () => void;
+  onSample: () => void;
+  hint: string;
+}
+
+const UploadBox: React.FC<UploadBoxProps> = ({ id, fileName, summary, unmatched, error, busy, onFile, onRemove, onSample, hint }) => (
+  <div className={local.uploadBox}>
+    <div className={local.uploadRow}>
+      <label htmlFor={id} className={`${styles.btnSmall} ${styles.btnSmallDark} ${local.uploadBtn}`}>
+        <UploadIcon /> {fileName ? 'Replace file' : 'Choose file'}
+      </label>
+      <input
+        id={id}
+        type="file"
+        accept=".xlsx,.csv"
+        className={local.fileInput}
+        disabled={busy}
+        onChange={e => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (file) onFile(file);
+        }}
+      />
+      <button type="button" className={styles.btnOutline} onClick={onSample}>
+        Download sample file
+      </button>
+      {busy && <span className={styles.helpText}>Reading file...</span>}
+    </div>
+    {fileName ? (
+      <div className={local.uploadFile}>
+        <CheckIcon size={14} />
+        <span>
+          <strong>{fileName}</strong> - {summary}
+        </span>
+        <button type="button" className={local.linkBtn} onClick={onRemove}>
+          Remove
+        </button>
+      </div>
+    ) : (
+      <div className={styles.helpText}>{hint}</div>
+    )}
+    {fileName && unmatched.length > 0 && (
+      <div className={local.uploadWarning}>
+        {unmatched.length} SKU{unmatched.length === 1 ? '' : 's'} in the file {unmatched.length === 1 ? 'is' : 'are'} not in
+        the product catalog and {unmatched.length === 1 ? 'was' : 'were'} skipped: {unmatched.slice(0, 8).join(', ')}
+        {unmatched.length > 8 ? ` and ${unmatched.length - 8} more` : ''}.
+      </div>
+    )}
+    {error && <div className={styles.errorText}>{error}</div>}
+  </div>
+);
+
+const UploadIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+    <polyline points="17 8 12 3 7 8"></polyline>
+    <line x1="12" y1="3" x2="12" y2="15"></line>
+  </svg>
+);
+
+const fileError = (error: unknown) => (error instanceof Error ? error.message : 'The file could not be read.');
+
 const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors }) => {
   const { brief } = draft;
   const [editing, setEditing] = useState(!draft.prompt);
   const [generating, setGenerating] = useState(false);
+  const [reading, setReading] = useState<'data' | 'products' | null>(null);
+  const [dataFileError, setDataFileError] = useState('');
+  const [productFileError, setProductFileError] = useState('');
 
   const hasPrompt = draft.prompt.trim() !== '';
   const isStale = hasPrompt && draft.prompt !== buildCampaignPrompt(draft);
   const needsDetail = sourceNeedsDetail(brief.productSource);
-  const briefHasErrors = !!(errors.dataToAnalyse || errors.productSource || errors.contentRequired);
+  const briefHasErrors = !!(errors.dataSources || errors.dataToAnalyse || errors.productSource || errors.contentRequired);
+  const availableData = getAvailableDataTypes(brief);
+  const usesUpload = brief.dataSources.includes('upload');
+  const usesProductFile = brief.productSource === UPLOADED_PRODUCT_SOURCE;
   const showAnswers = editing || !hasPrompt || briefHasErrors;
 
   const missing: string[] = [];
   if (!draft.objective) missing.push('campaign objective');
+  if (brief.dataSources.length === 0) missing.push('data source');
+  else if (usesUpload && !brief.dataFile) missing.push('data file');
   if (brief.dataToAnalyse.length === 0) missing.push('data to analyse');
   if (!brief.productSource) missing.push('products to consider');
+  else if (usesProductFile && !brief.productFile) missing.push('product list file');
   else if (needsDetail && !brief.productSourceDetail) missing.push(brief.productSource.toLowerCase());
   if (brief.contentRequired.length === 0) missing.push('content required');
+  if (!VALIDATION_ENABLED) missing.length = 0;
 
   const setBrief = (patch: Partial<CampaignBrief>) => update({ brief: { ...brief, ...patch } });
+
+  // Data that the chosen sources cannot supply is deselected along with the source.
+  const setSources = (patch: Pick<Partial<CampaignBrief>, 'dataSources' | 'dataFile'>) => {
+    const next = { ...brief, ...patch };
+    const available = getAvailableDataTypes(next);
+    setBrief({ ...patch, dataToAnalyse: brief.dataToAnalyse.filter(type => available.includes(type)) });
+  };
+
+  const handleDataFile = async (file: File) => {
+    setDataFileError('');
+    setReading('data');
+    try {
+      setSources({ dataFile: await parseDataFile(file) });
+    } catch (error) {
+      setDataFileError(fileError(error));
+    } finally {
+      setReading(null);
+    }
+  };
+
+  const handleProductFile = async (file: File) => {
+    setProductFileError('');
+    setReading('products');
+    try {
+      setBrief({ productFile: await parseProductFile(file) });
+    } catch (error) {
+      setProductFileError(fileError(error));
+    } finally {
+      setReading(null);
+    }
+  };
 
   const setRule = (index: number, value: string) =>
     setBrief({ additionalRules: brief.additionalRules.map((rule, i) => (i === index ? value : rule)) });
@@ -100,6 +215,10 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
               <div>
                 <div className={styles.infoLabel}>Campaign objective</div>
                 <div className={styles.infoValue}>{draft.objective || '-'}</div>
+              </div>
+              <div>
+                <div className={styles.infoLabel}>Data source</div>
+                <div className={styles.infoValue}>{describeDataSources(brief)}</div>
               </div>
               <div>
                 <div className={styles.infoLabel}>Data to analyse</div>
@@ -202,7 +321,7 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
               </button>
             ))}
           </div>
-          <div className={styles.helpText}>Carried over from the Create Campaign screen. Changing it here updates the campaign.</div>
+          <div className={styles.helpText}>Carried over from the Create Campaign step. Changing it here updates the campaign.</div>
         </div>
       </div>
 
@@ -212,18 +331,83 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
           <span className={styles.panelHeaderMeta}>{brief.dataToAnalyse.length} selected</span>
         </div>
         <div className={styles.panelBody}>
+          <div className={local.subLabel}>
+            Where does the data come from? <span className={styles.required}>*</span>
+          </div>
+          <div className={local.sourceCards}>
+            {DATA_SOURCES.map(source => {
+              const selected = brief.dataSources.includes(source.value);
+              const provides = source.value === 'upload' ? (brief.dataFile?.provides ?? []) : source.provides;
+              return (
+                <button
+                  key={source.value}
+                  type="button"
+                  aria-pressed={selected}
+                  className={`${local.sourceCard} ${selected ? local.sourceCardSelected : ''}`}
+                  onClick={() => setSources({ dataSources: toggleValue(brief.dataSources, source.value) })}
+                >
+                  <span className={local.sourceCheck}>{selected && <CheckIcon size={12} />}</span>
+                  <span className={local.sourceText}>
+                    <span className={local.sourceName}>
+                      {source.label}
+                      {source.value !== 'upload' && <span className={styles.badge}>Sample data</span>}
+                    </span>
+                    <span className={local.sourceDescription}>{source.description}</span>
+                    <span className={local.sourceProvides}>
+                      Provides: {provides.length > 0 ? provides.join(', ') : 'depends on the columns in your file'}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {showErrors && errors.dataSources && <div className={styles.errorText}>{errors.dataSources}</div>}
+
+          {usesUpload && (
+            <UploadBox
+              id="brief-data-file"
+              fileName={brief.dataFile?.fileName ?? null}
+              summary={
+                brief.dataFile
+                  ? `${brief.dataFile.rows.length} SKU${brief.dataFile.rows.length === 1 ? '' : 's'} matched, provides ${brief.dataFile.provides.join(', ')}`
+                  : ''
+              }
+              unmatched={brief.dataFile?.unmatched ?? []}
+              error={dataFileError}
+              busy={reading === 'data'}
+              onFile={handleDataFile}
+              onRemove={() => setSources({ dataFile: null })}
+              onSample={() => downloadCsv('sample-retail-data.csv', sampleDataCsv())}
+              hint="Excel (.xlsx) or CSV with a SKU column and any of: Weekly units, Margin %, Stock on hand. Your figures replace the sample figures for those SKUs."
+            />
+          )}
+
+          <div className={`${local.subLabel} ${local.subLabelSpaced}`}>
+            What should be analysed? <span className={styles.required}>*</span>
+          </div>
           <div className={styles.chipGroup}>
-            {DATA_TO_ANALYSE.map(source => (
-              <button
-                key={source}
-                type="button"
-                className={`${styles.chip} ${brief.dataToAnalyse.includes(source) ? styles.chipSelected : ''}`}
-                aria-pressed={brief.dataToAnalyse.includes(source)}
-                onClick={() => setBrief({ dataToAnalyse: toggleValue(brief.dataToAnalyse, source) })}
-              >
-                {source}
-              </button>
-            ))}
+            {DATA_TO_ANALYSE.map(source => {
+              const available = availableData.includes(source);
+              const selected = brief.dataToAnalyse.includes(source);
+              return (
+                <button
+                  key={source}
+                  type="button"
+                  className={`${styles.chip} ${selected ? styles.chipSelected : ''} ${available ? '' : local.chipDisabled}`}
+                  aria-pressed={selected}
+                  disabled={!available}
+                  title={available ? undefined : 'Not provided by the selected data sources'}
+                  onClick={() => setBrief({ dataToAnalyse: toggleValue(brief.dataToAnalyse, source) })}
+                >
+                  {source}
+                </button>
+              );
+            })}
+          </div>
+          <div className={styles.helpText}>
+            {brief.dataSources.length === 0
+              ? 'Select a data source first. Each source provides different data.'
+              : 'Greyed-out data is not provided by the selected sources.'}
           </div>
           {showErrors && errors.dataToAnalyse && <div className={styles.errorText}>{errors.dataToAnalyse}</div>}
         </div>
@@ -269,8 +453,28 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
               </select>
             </div>
           )}
+          {usesProductFile && (
+            <UploadBox
+              id="brief-product-file"
+              fileName={brief.productFile?.fileName ?? null}
+              summary={
+                brief.productFile
+                  ? `${brief.productFile.rows.length} product${brief.productFile.rows.length === 1 ? '' : 's'} matched${
+                      brief.productFile.rows.some(row => row.promoPrice !== undefined) ? ', promo prices taken from the file' : ''
+                    }`
+                  : ''
+              }
+              unmatched={brief.productFile?.unmatched ?? []}
+              error={productFileError}
+              busy={reading === 'products'}
+              onFile={handleProductFile}
+              onRemove={() => setBrief({ productFile: null })}
+              onSample={() => downloadCsv('sample-product-list.csv', sampleProductCsv())}
+              hint="Excel (.xlsx) or CSV with a SKU column and optionally a Promo price column. Only these products are used; they are ranked by your objective on the next step."
+            />
+          )}
           {brief.productSource === 'User-selected products' && (
-            <div className={styles.helpText}>You will add the products yourself on the next screen.</div>
+            <div className={styles.helpText}>You will add the products yourself on the next step.</div>
           )}
         </div>
       </div>

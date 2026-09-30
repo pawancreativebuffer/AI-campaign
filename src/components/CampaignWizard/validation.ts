@@ -1,7 +1,8 @@
 import { EXISTING_SCHEDULES } from './mockData';
-import { ESL_MAX_CHANGES_PER_DAY } from './options';
+import { ESL_MAX_CHANGES_PER_DAY, UPLOADED_PRODUCT_SOURCE } from './options';
 import {
   TEMPLATE_BY_ID,
+  getAvailableDataTypes,
   getChangeTimes,
   getRequiredFormats,
   getSelectedDevices,
@@ -13,11 +14,18 @@ import {
 import { buildCampaignPrompt, sourceNeedsDetail } from './steps/promptBuilder';
 import type { CampaignDraft, StepErrors, ValidationCheck } from './types';
 
-const ESL_LIMIT_MESSAGE = `ESL campaigns allow no more than ${ESL_MAX_CHANGES_PER_DAY} content changes per day. Reduce the content-change frequency on the Schedule screen.`;
+const ESL_LIMIT_MESSAGE = `ESL campaigns allow no more than ${ESL_MAX_CHANGES_PER_DAY} content changes per day. Reduce the content-change frequency on the Schedule step.`;
+
+/**
+ * Switched off so the flow can be clicked through while testing.
+ * Set to true to enforce the per-step rules and block scheduling on failed checks again.
+ */
+export const VALIDATION_ENABLED = true;
 
 /** Errors that stop the user leaving a screen. Keys are field names the step renders against. */
 export function getStepErrors(step: number, draft: CampaignDraft): StepErrors {
   const errors: StepErrors = {};
+  if (!VALIDATION_ENABLED) return errors;
 
   switch (step) {
     case 1:
@@ -73,10 +81,22 @@ export function getStepErrors(step: number, draft: CampaignDraft): StepErrors {
       break;
     }
 
-    case 6:
-      if (draft.brief.dataToAnalyse.length === 0) errors.dataToAnalyse = 'Select at least one data source to analyse';
+    case 6: {
+      const available = getAvailableDataTypes(draft.brief);
+      if (draft.brief.dataSources.length === 0) {
+        errors.dataSources = 'Select where the data comes from';
+      } else if (draft.brief.dataSources.includes('upload') && !draft.brief.dataFile) {
+        errors.dataSources = 'Upload the data file, or deselect Excel upload';
+      }
+      if (draft.brief.dataToAnalyse.length === 0) {
+        errors.dataToAnalyse = 'Select at least one type of data to analyse';
+      } else if (draft.brief.dataToAnalyse.some(type => !available.includes(type))) {
+        errors.dataToAnalyse = 'Some selected data is not provided by the chosen data sources';
+      }
       if (!draft.brief.productSource) {
         errors.productSource = 'Select the products to consider';
+      } else if (draft.brief.productSource === UPLOADED_PRODUCT_SOURCE && !draft.brief.productFile) {
+        errors.productSource = 'Upload the product list';
       } else if (sourceNeedsDetail(draft.brief.productSource) && !draft.brief.productSourceDetail) {
         errors.productSource = `Select the ${draft.brief.productSource.toLowerCase()} to consider`;
       }
@@ -87,6 +107,7 @@ export function getStepErrors(step: number, draft: CampaignDraft): StepErrors {
         errors.prompt = 'The campaign changed after the prompt was generated. Regenerate the prompt before continuing';
       }
       break;
+    }
 
     case 7:
       if (!draft.products.some(p => p.approved)) errors.products = 'Approve at least one product';

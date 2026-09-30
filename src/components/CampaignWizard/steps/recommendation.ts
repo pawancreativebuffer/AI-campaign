@@ -1,4 +1,5 @@
 import { PRODUCT_BRANDS, PRODUCT_CATALOG, PRODUCT_CATEGORIES, PRODUCT_SUPPLIERS } from '../mockData';
+import { UPLOADED_PRODUCT_SOURCE } from '../options';
 import { formatCurrency, formatTime12, getChangeTimes } from '../helpers';
 import type { CampaignDraft, CampaignProduct, CatalogProduct } from '../types';
 
@@ -23,6 +24,36 @@ const FACTOR_CATEGORIES: Record<string, string[]> = {
 };
 
 export const CATALOG_BY_SKU = new Map<string, CatalogProduct>(PRODUCT_CATALOG.map(p => [p.sku, p]));
+
+/**
+ * The catalog as this campaign sees it: uploaded data replaces the sample figures
+ * for the SKUs it covers, and an uploaded product list can set promotional prices.
+ */
+export function getCampaignCatalog(draft: CampaignDraft): CatalogProduct[] {
+  const { brief } = draft;
+  const data = brief.dataSources.includes('upload') ? brief.dataFile : null;
+  const list = brief.productSource === UPLOADED_PRODUCT_SOURCE ? brief.productFile : null;
+  if (!data && !list) return PRODUCT_CATALOG;
+
+  const dataBySku = new Map((data?.rows ?? []).map(row => [row.sku, row]));
+  const listBySku = new Map((list?.rows ?? []).map(row => [row.sku, row]));
+  return PRODUCT_CATALOG.map(product => {
+    const d = dataBySku.get(product.sku);
+    const l = listBySku.get(product.sku);
+    if (!d && !l) return product;
+    return {
+      ...product,
+      weeklyUnits: d?.weeklyUnits ?? product.weeklyUnits,
+      marginPct: d?.marginPct ?? product.marginPct,
+      stockOnHand: d?.stockOnHand ?? product.stockOnHand,
+      promoPrice: l?.promoPrice ?? product.promoPrice,
+    };
+  });
+}
+
+export function getCatalogProduct(sku: string, draft: CampaignDraft): CatalogProduct | undefined {
+  return getCampaignCatalog(draft).find(product => product.sku === sku);
+}
 
 export function formatNumber(value: number): string {
   return String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -98,8 +129,11 @@ function pickContentType(draft: CampaignDraft): string {
 function candidateProducts(draft: CampaignDraft): CatalogProduct[] {
   const { productSource, productSourceDetail, additionalRules } = draft.brief;
   const rules = parseRules(additionalRules);
+  const uploaded =
+    productSource === UPLOADED_PRODUCT_SOURCE ? new Set((draft.brief.productFile?.rows ?? []).map(row => row.sku)) : null;
 
-  return PRODUCT_CATALOG.filter(product => {
+  return getCampaignCatalog(draft).filter(product => {
+    if (uploaded && !uploaded.has(product.sku)) return false;
     if (productSource === 'Category' && product.category !== productSourceDetail) return false;
     if (productSource === 'Supplier' && product.supplier !== productSourceDetail) return false;
     if (productSource === 'Brand' && product.brand !== productSourceDetail) return false;
@@ -293,6 +327,7 @@ export function recommendProducts(draft: CampaignDraft, excludeSkus: string[] = 
   const rules = parseRules(draft.brief.additionalRules);
   const candidates = candidateProducts(draft).filter(p => !excludeSkus.includes(p.sku));
   const supplier = draft.objective === 'Supplier campaign' ? focusSupplier(draft, candidates) : '';
+  const uploadedList = draft.brief.productSource === UPLOADED_PRODUCT_SOURCE ? draft.brief.productFile : null;
 
   return candidates
     .map(product => {
@@ -303,8 +338,13 @@ export function recommendProducts(draft: CampaignDraft, excludeSkus: string[] = 
       return { product, score: objectiveScore(product, draft.objective, supplier) * boost };
     })
     .sort((a, b) => b.score - a.score || a.product.sku.localeCompare(b.product.sku))
-    .slice(0, RECOMMENDATION_COUNT)
-    .map(({ product }) => toCampaignProduct(product, draft, supplier));
+    .slice(0, uploadedList ? undefined : RECOMMENDATION_COUNT)
+    .map(({ product }) => {
+      const recommended = toCampaignProduct(product, draft, supplier);
+      return uploadedList
+        ? { ...recommended, reason: `${recommended.reason} Included from your uploaded list "${uploadedList.fileName}".` }
+        : recommended;
+    });
 }
 
 /** A product the user picked themselves, either added manually or chosen as a replacement. */
