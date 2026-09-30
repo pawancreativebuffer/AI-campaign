@@ -1,0 +1,132 @@
+.emptyText {
+  margin-bottom: var(--spacing-md);
+}
+
+.generateRow {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+}
+
+.generating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: 64px var(--spacing-md);
+  text-align: center;
+}
+
+.generatingTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2b2b36;
+}
+
+.progressTrack {
+  width: 100%;
+  max-width: 360px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: var(--border-color);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--success-green);
+  transition: width 0.15s linear;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.filter {
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+}
+
+.filter span {
+  margin-bottom: 4px;
+}
+
+.resultCount {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-md);
+}
+
+.outputGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.outputCard {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: white;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 332px;
+  padding: var(--spacing-md);
+  background-color: var(--secondary-bg);
+  overflow-x: auto;
+}
+
+.outputBody {
+  padding: 12px var(--spacing-md) var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.outputTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2b2b36;
+}
+
+.outputSize {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.outputBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin: var(--spacing-sm) 0 12px;
+}
+
+.outputMeta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px var(--spacing-md);
+  font-size: 14px;
+}
+
+.outputMeta dt {
+  color: var(--text-muted);
+}
+
+.outputMeta dd {
+  color: #2b2b36;
+  font-weight: 500;
+}
+
+@media (max-width: 1100px) {
+  .outputGrid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}

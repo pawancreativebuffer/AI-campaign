@@ -1,0 +1,95 @@
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-md) var(--spacing-lg);
+}
+
+.filterLabel {
+  font-size: 13px;
+  color: #4b5563;
+  margin-bottom: var(--spacing-sm);
+}
+
+.filterLabel span {
+  color: var(--primary-pink);
+  font-weight: 600;
+}
+
+.filterGrid button.filterChip {
+  padding: 5px 12px;
+  font-size: 13px;
+}
+
+.resetBtn {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--primary-pink);
+  text-decoration: underline;
+}
+
+.resetBtn:disabled {
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: default;
+}
+
+.statSub {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.breakdownScroll {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.checkCol {
+  width: 40px;
+}
+
+.primaryText {
+  color: #2b2b36;
+  font-weight: 500;
+}
+
+.subText {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.pageControls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.emptyActions {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+@media (max-width: 1100px) {
+  .filterGrid {
+    grid-template-columns: 1fr;
+  }
+}

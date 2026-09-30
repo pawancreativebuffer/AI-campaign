@@ -1,0 +1,107 @@
+.checklist {
+  display: flex;
+  flex-direction: column;
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.checkItem:first-child {
+  padding-top: 0;
+}
+
+.checkItem:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.checkIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white;
+}
+
+.pass {
+  background-color: var(--success-green);
+}
+
+.warning {
+  background-color: #f59e0b;
+}
+
+.fail {
+  background-color: var(--btn-danger);
+}
+
+.checkBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.checkHead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-bottom: 4px;
+}
+
+.checkLabel {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2b2b36;
+}
+
+.checkDetail {
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.alertTitle {
+  font-weight: 600;
+}
+
+.success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--spacing-lg) var(--spacing-md) var(--spacing-xl);
+}
+
+.successIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: var(--success-green);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.successTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2b2b36;
+  margin-bottom: var(--spacing-sm);
+}
+
+.successText {
+  font-size: 15px;
+  color: #4b5563;
+  line-height: 1.5;
+  max-width: 560px;
+}

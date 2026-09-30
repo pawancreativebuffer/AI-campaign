@@ -1,0 +1,131 @@
+.emptyText {
+  margin-bottom: var(--spacing-md);
+}
+
+.progressTrack {
+  flex: 1;
+  min-width: 160px;
+  max-width: 320px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: var(--border-color);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--success-green);
+  transition: width 0.3s ease;
+}
+
+.mediaGroup {
+  margin-top: var(--spacing-lg);
+}
+
+.mediaHeader {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.mediaTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2b2b36;
+}
+
+.templateGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.templateCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background-color: white;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.templateCard:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.templateCardSelected,
+.templateCardSelected:hover {
+  border-color: var(--primary-pink);
+  background-color: rgba(235, 39, 113, 0.02);
+}
+
+.selectedMark {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--primary-pink);
+  color: white;
+}
+
+.thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 152px;
+  padding: 12px 8px;
+  border-radius: 4px;
+  background-color: var(--secondary-bg);
+  overflow: hidden;
+}
+
+.templateName {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2b2b36;
+}
+
+.templateMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.templateId {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.contentTypes {
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.contentTypesLabel {
+  color: var(--text-muted);
+}
+
+.noTemplates {
+  margin-bottom: 0;
+}
+
+.linkBtn {
+  color: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}

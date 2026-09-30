@@ -1,10 +1,16 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './CampaignTable.module.css';
 import CreateCampaignModal from './CreateCampaignModal';
 import CampaignContents from './CampaignContents';
 import CampaignDetail from './CampaignDetail';
+import { useSavedCampaigns } from './CampaignWizard/campaignStore';
+
+// The modal flow is superseded by the step-by-step page at /intelligent-campaign.
+// Flip this to bring its button back.
+const SHOW_MODAL_CREATE_BUTTON = false;
 
 const campaignsData = [
   {
@@ -102,6 +108,8 @@ const TrashIcon = () => (
 );
 
 const CampaignTable = () => {
+  const router = useRouter();
+  const savedCampaigns = useSavedCampaigns();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [campaigns, setCampaigns] = useState(campaignsData);
   const [isCreating, setIsCreating] = useState(false);
@@ -176,17 +184,32 @@ const CampaignTable = () => {
             </svg>
           </div>
         </div>
-        <button className={styles.createBtn} onClick={() => setIsModalOpen(true)}>
-          <div className={styles.createBtnIcon}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-          </div>
-          <div className={styles.createBtnText}>
-            Create Campaign
-          </div>
-        </button>
+        <div className={styles.toolbarButtons}>
+          {SHOW_MODAL_CREATE_BUTTON && (
+            <button className={styles.createBtn} onClick={() => setIsModalOpen(true)}>
+              <div className={styles.createBtnIcon}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </div>
+              <div className={styles.createBtnText}>
+                Create Campaign
+              </div>
+            </button>
+          )}
+          <button className={styles.createBtn} onClick={() => router.push('/intelligent-campaign')}>
+            <div className={styles.createBtnIcon}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </div>
+            <div className={styles.createBtnText}>
+              Create Campaign
+            </div>
+          </button>
+        </div>
       </div>
 
       <div className={styles.tableWrapper}>
@@ -213,6 +236,35 @@ const CampaignTable = () => {
                 </td>
               </tr>
             )}
+            {savedCampaigns.map(campaign => (
+              <tr key={campaign.id}>
+                <td>
+                  {campaign.contentName}{' '}
+                  <span className={`${styles.statusBadge} ${campaign.status === 'Scheduled' ? styles.statusScheduled : ''}`}>
+                    {campaign.status}
+                  </span>
+                </td>
+                <td>{campaign.screenGroup}</td>
+                <td style={{ maxWidth: '200px', whiteSpace: 'normal', wordWrap: 'break-word' }}>{campaign.tags}</td>
+                <td style={{ maxWidth: '200px', whiteSpace: 'normal', wordWrap: 'break-word' }}>{campaign.region}</td>
+                <td style={{ maxWidth: '200px', whiteSpace: 'normal', wordWrap: 'break-word' }}>{campaign.category}</td>
+                <td>{campaign.startDate}</td>
+                <td>{campaign.endDate}</td>
+                <td>
+                  <div className={styles.actions}>
+                    <button className={`${styles.actionBtn} ${styles.add}`} onClick={() => handleOpenContents(campaign)}>
+                      <PlusIcon />
+                    </button>
+                    <button className={`${styles.actionBtn} ${styles.stats}`}>
+                      <ChartIcon />
+                    </button>
+                    <button className={`${styles.actionBtn} ${styles.delete}`}>
+                      <TrashIcon />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
             {campaigns.map((campaign, index) => (
               <tr key={index}>
                 <td>{campaign.contentName}</td>

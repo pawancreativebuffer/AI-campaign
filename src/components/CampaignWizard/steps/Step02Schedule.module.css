@@ -1,0 +1,45 @@
+.daysRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.quickPicks {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.quickPickActive,
+.quickPickActive:hover {
+  border-color: var(--primary-pink);
+  color: var(--primary-pink);
+  background-color: rgba(235, 39, 113, 0.05);
+}
+
+.changeTimes {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.changeTimesTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2b2b36;
+  margin-bottom: var(--spacing-sm);
+}
+
+.changeTimesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.eslNote {
+  margin-top: var(--spacing-md);
+  margin-bottom: 0;
+}

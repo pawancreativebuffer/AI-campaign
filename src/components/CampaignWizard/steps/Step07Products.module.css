@@ -1,0 +1,162 @@
+.cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: 40px 16px;
+  text-align: center;
+  border: 1px dashed #d1d5db;
+  border-radius: 4px;
+  margin-bottom: var(--spacing-md);
+  color: #4b5563;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.ctaTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2b2b36;
+}
+
+.productTable th,
+.productTable td {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.productTable td {
+  vertical-align: middle;
+}
+
+.sku {
+  font-weight: 600;
+  color: #2b2b36;
+  white-space: nowrap;
+}
+
+.description {
+  min-width: 150px;
+  font-weight: 500;
+  color: #2b2b36;
+}
+
+.sub {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.promoPrice {
+  font-weight: 600;
+  color: var(--primary-pink);
+}
+
+.stock {
+  white-space: nowrap;
+}
+
+.contentSelect {
+  min-width: 170px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 14px;
+}
+
+.replaceRow td {
+  background-color: #f8f9fa;
+}
+
+.replaceBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.replaceSelect {
+  width: 420px;
+  max-width: 100%;
+}
+
+.addSearch {
+  width: 360px;
+  max-width: 100%;
+}
+
+.resultList {
+  margin-top: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+}
+
+.resultItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: 8px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.resultItem:last-child {
+  border-bottom: none;
+}
+
+.resultName {
+  font-weight: 500;
+  color: #2b2b36;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 16px;
+  font-size: 15px;
+  color: #4b5563;
+}
+
+.actions {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* Shrink to the buttons so the spare width goes to the data columns, not a gap on the right. */
+.actionsCol {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.whyBtn {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--primary-pink);
+  text-decoration: underline;
+}
+
+.approveBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 104px;
+  padding: 7px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  background-color: var(--success-green);
+  border: 1px solid var(--success-green);
+}
+
+.approveBtnOn {
+  color: #15803d;
+  background-color: #dcfce7;
+  border-color: #86efac;
+}

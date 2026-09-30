@@ -1,0 +1,78 @@
+.alertTitle {
+  font-weight: 600;
+}
+
+.subLabel {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: var(--spacing-md) 0 var(--spacing-sm);
+}
+
+.badgeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.editBtn {
+  flex-shrink: 0;
+}
+
+.promptDetails {
+  margin-top: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.promptDetails summary {
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2b2b36;
+  cursor: pointer;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.promptDetails[open] summary {
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 4px 4px 0 0;
+}
+
+.promptText {
+  padding: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.productName {
+  color: #2b2b36;
+  font-weight: 500;
+}
+
+.productMeta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.saving {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.note {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: var(--spacing-sm);
+}
+
+.statGridFlush {
+  margin-bottom: 0;
+}
