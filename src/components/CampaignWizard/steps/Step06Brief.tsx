@@ -2,19 +2,33 @@ import React, { useState } from 'react';
 import styles from '../wizard.module.css';
 import local from './Step06Brief.module.css';
 import {
-  CONTENT_TYPES,
   DATA_SOURCES,
   DATA_TO_ANALYSE,
+  ESL_MAX_CHANGES_PER_DAY,
   EXTERNAL_FACTORS,
+  MAX_SLOTS,
+  MAX_SLOT_SECONDS,
+  MIN_SLOT_SECONDS,
   OBJECTIVES,
   PRODUCT_SOURCES,
+  SLOT_KINDS,
+  SLOT_PRESETS,
   UPLOADED_PRODUCT_SOURCE,
 } from '../options';
 import { PRODUCT_BRANDS, PRODUCT_CATEGORIES, PRODUCT_SUPPLIERS } from '../mockData';
-import { getAvailableDataTypes, toggleValue } from '../helpers';
+import {
+  createDefaultSlots,
+  createSlot,
+  getAvailableDataTypes,
+  getLoopSeconds,
+  isProductSlot,
+  nextSlotId,
+  slotKindsInUse,
+  toggleValue,
+} from '../helpers';
 import { AlertIcon, CheckIcon, EditIcon, EyeIcon, PlusIcon, RefreshIcon, SparkleIcon, TrashIcon } from '../icons';
 import { VALIDATION_ENABLED } from '../validation';
-import type { CampaignBrief, StepProps } from '../types';
+import type { CampaignBrief, CampaignDraft, CampaignSlot, StepProps } from '../types';
 import { buildCampaignPrompt, cleanRules, describeDataSources, describeProductSource, sourceNeedsDetail } from './promptBuilder';
 import { downloadCsv, parseDataFile, parseProductFile, sampleDataCsv, sampleProductCsv } from './fileImport';
 
@@ -102,6 +116,30 @@ const UploadIcon = () => (
   </svg>
 );
 
+const ChevronIcon = ({ up }: { up: boolean }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points={up ? '18 15 12 9 6 15' : '6 9 12 15 18 9'}></polyline>
+  </svg>
+);
+
+const plural = (count: number, word: string) => (count === 1 || word.endsWith('s') ? word : `${word}s`);
+
+/** e.g. "5 product promotions, 1 loyalty advert, 1 seasonal greeting, 1 opening hours". */
+const describeSlotBreakdown = (slots: CampaignSlot[]) =>
+  slotKindsInUse(slots)
+    .map(kind => {
+      const count = slots.filter(slot => slot.kind === kind).length;
+      return `${count} ${plural(count, kind.toLowerCase())}`;
+    })
+    .join(', ');
+
+/** e.g. "8 slots x 8 sec = 64-second loop". */
+const describeSlotLoop = (draft: Pick<CampaignDraft, 'slots' | 'slotSeconds'>) =>
+  `${draft.slots.length} slot${draft.slots.length === 1 ? '' : 's'} x ${draft.slotSeconds} sec = ${getLoopSeconds(draft)}-second loop`;
+
+const isValidSlotSeconds = (seconds: number) =>
+  Number.isInteger(seconds) && seconds >= MIN_SLOT_SECONDS && seconds <= MAX_SLOT_SECONDS;
+
 const fileError = (error: unknown) => (error instanceof Error ? error.message : 'The file could not be read.');
 
 const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors }) => {
@@ -115,7 +153,7 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
   const hasPrompt = draft.prompt.trim() !== '';
   const isStale = hasPrompt && draft.prompt !== buildCampaignPrompt(draft);
   const needsDetail = sourceNeedsDetail(brief.productSource);
-  const briefHasErrors = !!(errors.dataSources || errors.dataToAnalyse || errors.productSource || errors.contentRequired);
+  const briefHasErrors = !!(errors.dataSources || errors.dataToAnalyse || errors.productSource || errors.slots || errors.slotSeconds);
   const availableData = getAvailableDataTypes(brief);
   const usesUpload = brief.dataSources.includes('upload');
   const usesProductFile = brief.productSource === UPLOADED_PRODUCT_SOURCE;
@@ -129,7 +167,8 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
   if (!brief.productSource) missing.push('products to consider');
   else if (usesProductFile && !brief.productFile) missing.push('product list file');
   else if (needsDetail && !brief.productSourceDetail) missing.push(brief.productSource.toLowerCase());
-  if (brief.contentRequired.length === 0) missing.push('content required');
+  if (draft.slots.length === 0) missing.push('campaign slots');
+  if (!isValidSlotSeconds(draft.slotSeconds)) missing.push('seconds per slot');
   if (!VALIDATION_ENABLED) missing.length = 0;
 
   const setBrief = (patch: Partial<CampaignBrief>) => update({ brief: { ...brief, ...patch } });
@@ -163,6 +202,29 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
     } finally {
       setReading(null);
     }
+  };
+
+  const usesEsl = draft.media === 'esl' || draft.media === 'both';
+  const slotBreakdown = describeSlotBreakdown(draft.slots);
+  const setSlots = (slots: CampaignSlot[]) => update({ slots });
+
+  // Keeps the slots already planned; adds product promotions at the end or trims from the end.
+  const applyPreset = (count: number, seconds: number) => {
+    const slots = draft.slots.slice(0, count);
+    while (slots.length < count) slots.push(createSlot(nextSlotId(slots)));
+    update({ slotSeconds: seconds, slots });
+  };
+
+  // Product, design and message text belong to the old kind, so they are cleared.
+  const setSlotKind = (index: number, kind: string) =>
+    setSlots(draft.slots.map((slot, i) => (i === index && slot.kind !== kind ? createSlot(slot.id, kind) : slot)));
+
+  const moveSlot = (index: number, offset: number) => {
+    const target = index + offset;
+    if (target < 0 || target >= draft.slots.length) return;
+    const slots = [...draft.slots];
+    [slots[index], slots[target]] = [slots[target], slots[index]];
+    setSlots(slots);
   };
 
   const setRule = (index: number, value: string) =>
@@ -233,8 +295,10 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
                 <div className={styles.infoValue}>{brief.externalFactors.join(', ') || 'None'}</div>
               </div>
               <div>
-                <div className={styles.infoLabel}>Content required</div>
-                <div className={styles.infoValue}>{brief.contentRequired.join(', ') || '-'}</div>
+                <div className={styles.infoLabel}>Content required: campaign slots</div>
+                <div className={styles.infoValue}>
+                  {draft.slots.length === 0 ? '-' : `${describeSlotLoop(draft)}: ${slotBreakdown}`}
+                </div>
               </div>
               <div>
                 <div className={styles.infoLabel}>Additional rules</div>
@@ -503,24 +567,147 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
 
       <div className={styles.panel}>
         <div className={styles.panelHeader}>
-          {panelTitle(5, 'Content required', true)}
-          <span className={styles.panelHeaderMeta}>{brief.contentRequired.length} selected</span>
+          {panelTitle(5, 'Content required: campaign slots', true)}
+          <span className={styles.panelHeaderMeta}>
+            {draft.slots.length} slot{draft.slots.length === 1 ? '' : 's'}
+          </span>
         </div>
         <div className={styles.panelBody}>
-          <div className={styles.chipGroup}>
-            {CONTENT_TYPES.map(type => (
-              <button
-                key={type}
-                type="button"
-                className={`${styles.chip} ${brief.contentRequired.includes(type) ? styles.chipSelected : ''}`}
-                aria-pressed={brief.contentRequired.includes(type)}
-                onClick={() => setBrief({ contentRequired: toggleValue(brief.contentRequired, type) })}
-              >
-                {type}
-              </button>
-            ))}
+          <div className={styles.helpText} style={{ marginTop: 0, marginBottom: 14 }}>
+            The campaign runs as a loop of slots. Each slot is one piece of content shown for the same number of
+            seconds. You choose the product and design for each product slot on the next steps.
           </div>
-          {showErrors && errors.contentRequired && <div className={styles.errorText}>{errors.contentRequired}</div>}
+
+          <div className={local.slotControls}>
+            <div className={local.secondsField}>
+              <label className={local.subLabel} htmlFor="brief-slot-seconds">
+                Seconds per slot <span className={styles.required}>*</span>
+              </label>
+              <input
+                id="brief-slot-seconds"
+                type="number"
+                min={MIN_SLOT_SECONDS}
+                max={MAX_SLOT_SECONDS}
+                step={1}
+                className={`${styles.input} ${local.secondsInput} ${showErrors && errors.slotSeconds ? styles.inputError : ''}`}
+                value={Number.isFinite(draft.slotSeconds) && draft.slotSeconds !== 0 ? draft.slotSeconds : ''}
+                onChange={e => update({ slotSeconds: e.target.value === '' ? 0 : Number(e.target.value) })}
+              />
+            </div>
+            <div className={local.presetField}>
+              <div className={local.subLabel}>Quick structures</div>
+              <div className={local.presetRow}>
+                {SLOT_PRESETS.map(preset => {
+                  const active = draft.slots.length === preset.slots && draft.slotSeconds === preset.seconds;
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      className={`${styles.btnOutline} ${active ? local.presetActive : ''}`}
+                      aria-pressed={active}
+                      onClick={() => applyPreset(preset.slots, preset.seconds)}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+                <button type="button" className={styles.btnOutline} onClick={() => setSlots(createDefaultSlots())}>
+                  <RefreshIcon size={14} /> Use example structure
+                </button>
+              </div>
+            </div>
+          </div>
+          {showErrors && errors.slotSeconds ? (
+            <div className={styles.errorText}>{errors.slotSeconds}</div>
+          ) : (
+            <div className={styles.helpText}>
+              Between {MIN_SLOT_SECONDS} and {MAX_SLOT_SECONDS} seconds. The example structure is 5 product promotions,
+              1 loyalty advert, 1 seasonal greeting and 1 opening hours slot.
+            </div>
+          )}
+
+          {draft.slots.length > 0 && (
+            <ol className={local.slotList}>
+              {draft.slots.map((slot, index) => {
+                const product = isProductSlot(slot.kind);
+                return (
+                  <li key={slot.id} className={local.slotRow}>
+                    <span className={local.slotNumber}>{index + 1}</span>
+                    <select
+                      className={`${styles.select} ${local.slotSelect}`}
+                      value={slot.kind}
+                      aria-label={`Slot ${index + 1} content`}
+                      onChange={e => setSlotKind(index, e.target.value)}
+                    >
+                      {SLOT_KINDS.map(kind => (
+                        <option key={kind} value={kind}>
+                          {kind}
+                        </option>
+                      ))}
+                    </select>
+                    <span className={`${styles.badge} ${product ? styles.badgePink : styles.badgeBlue} ${local.slotBadge}`}>
+                      {product ? 'Product' : 'Message'}
+                    </span>
+                    <div className={local.slotActions}>
+                      <button
+                        type="button"
+                        className={local.slotMove}
+                        aria-label={`Move slot ${index + 1} up`}
+                        disabled={index === 0}
+                        onClick={() => moveSlot(index, -1)}
+                      >
+                        <ChevronIcon up />
+                      </button>
+                      <button
+                        type="button"
+                        className={local.slotMove}
+                        aria-label={`Move slot ${index + 1} down`}
+                        disabled={index === draft.slots.length - 1}
+                        onClick={() => moveSlot(index, 1)}
+                      >
+                        <ChevronIcon up={false} />
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.iconBtn} ${styles.iconBtnGhost}`}
+                        aria-label={`Remove slot ${index + 1}`}
+                        onClick={() => setSlots(draft.slots.filter((_, i) => i !== index))}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+
+          {draft.slots.length < MAX_SLOTS ? (
+            <button
+              type="button"
+              className={`${styles.btnDashed} ${local.addSlot}`}
+              onClick={() => setSlots([...draft.slots, createSlot(nextSlotId(draft.slots))])}
+            >
+              <PlusIcon /> Add slot
+            </button>
+          ) : (
+            <div className={styles.helpText}>A campaign can have up to {MAX_SLOTS} slots.</div>
+          )}
+          {showErrors && errors.slots && <div className={styles.errorText}>{errors.slots}</div>}
+
+          {draft.slots.length > 0 && (
+            <div className={local.slotSummary}>
+              <strong>{describeSlotLoop(draft)} on Digital Signage</strong>
+              <span>{slotBreakdown}</span>
+            </div>
+          )}
+
+          {usesEsl && (
+            <div className={styles.helpText}>
+              ESL labels show one product each and change up to {ESL_MAX_CHANGES_PER_DAY} times a day, so only product
+              slots go to ESL. Message slots run on Digital Signage only.
+            </div>
+          )}
         </div>
       </div>
 

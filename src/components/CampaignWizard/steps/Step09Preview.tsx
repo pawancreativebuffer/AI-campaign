@@ -1,35 +1,220 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styles from '../wizard.module.css';
 import css from './Step09Preview.module.css';
-import ContentPreview from './ContentPreview';
+import TicketPreview from './TicketPreview';
+import { getSlotOutputs, getTicketContent } from './ticketContent';
+import type { SlotOutput } from './ticketContent';
 import { ESL_COLOUR_LABELS } from '../mockData';
-import { TEMPLATE_BY_ID, getRequiredFormats, mediaLabel, unique } from '../helpers';
-import { AlertIcon, CheckIcon, RefreshIcon, SparkleIcon } from '../icons';
-import type { ContentFormat, DeviceMedia, StepProps, Template } from '../types';
-
-interface FormatTemplate {
-  format: ContentFormat;
-  template: Template;
-}
+import { getClientPack, getDesignLabel } from '../clients';
+import { getLoopSeconds, getPixelSize, getRequiredFormats, isProductSlot, mediaLabel, unique } from '../helpers';
+import { isSlotComplete } from '../validation';
+import { AlertIcon, ArrowLeftIcon, ArrowRightIcon, CheckIcon, RefreshIcon, SparkleIcon } from '../icons';
+import type { CampaignDraft, CampaignSlot, ContentFormat, DeviceMedia, StepProps } from '../types';
 
 interface Filters {
   media: 'all' | DeviceMedia;
   format: string;
   size: string;
-  sku: string;
+  slot: string;
 }
 
 const ALL = 'all';
-const NO_FILTERS: Filters = { media: ALL, format: ALL, size: ALL, sku: ALL };
+const NO_FILTERS: Filters = { media: ALL, format: ALL, size: ALL, slot: ALL };
 const PAGE_SIZE = 24;
 const GENERATION_TICKS = 12;
 const TICK_MS = 150;
+const PLAYER_TICK_MS = 100;
 
 // "Format" is the orientation of a screen or the colour capability of a label; "size" is its resolution or label size.
 const formatOf = (f: ContentFormat) =>
   f.media === 'signage' ? f.orientation : (ESL_COLOUR_LABELS[f.eslColour] ?? f.eslColour);
 const sizeOf = (f: ContentFormat) => (f.media === 'signage' ? f.resolution : f.eslSize);
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+
+/** Name of the slot's design in the client's template pack. Message slots use the draft message design. */
+function designName(slot: CampaignSlot, clientId: string): string {
+  if (!isProductSlot(slot.kind)) return 'Draft design';
+  return slot.ticketType ? getDesignLabel(clientId, slot.ticketType) : 'No design';
+}
+
+/** Product name for product slots, headline for message slots. */
+function slotTitle(slot: CampaignSlot, draft: CampaignDraft): string {
+  const content = getTicketContent(slot, draft);
+  return content.product ? `${content.product.description} ${content.product.size}` : (content.headline ?? '');
+}
+
+/** Largest on-screen width that keeps the format inside maxWidth x maxHeight. */
+function fitWidth(format: ContentFormat, maxWidth: number, maxHeight: number): number {
+  const { width, height } = getPixelSize(format);
+  return Math.max(1, Math.min(maxWidth, Math.round((maxHeight * width) / height)));
+}
+
+interface TicketProps {
+  slot: CampaignSlot;
+  format: ContentFormat;
+  draft: CampaignDraft;
+  maxWidth: number;
+  maxHeight: number;
+}
+
+const Ticket = ({ slot, format, draft, maxWidth, maxHeight }: TicketProps) => {
+  const { width, height } = getPixelSize(format);
+  return (
+    <TicketPreview
+      clientId={draft.clientId}
+      content={getTicketContent(slot, draft)}
+      width={width}
+      height={height}
+      displayWidth={fitWidth(format, maxWidth, maxHeight)}
+      eslColour={format.media === 'esl' ? format.eslColour : undefined}
+    />
+  );
+};
+
+const PlayIcon = () => (
+  <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <polygon points="6 4 20 12 6 20 6 4"></polygon>
+  </svg>
+);
+
+const PauseIcon = () => (
+  <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <rect x="5" y="4" width="5" height="16"></rect>
+    <rect x="14" y="4" width="5" height="16"></rect>
+  </svg>
+);
+
+// ---------- Digital Signage loop player ----------
+
+interface PlayerProps {
+  draft: CampaignDraft;
+  formats: ContentFormat[]; // signage formats only, at least one
+}
+
+const SignagePlayer = ({ draft, formats }: PlayerProps) => {
+  const [formatKey, setFormatKey] = useState(formats[0].key);
+  const [playing, setPlaying] = useState(true);
+  const [pos, setPos] = useState({ index: 0, elapsed: 0 });
+
+  const format = formats.find(f => f.key === formatKey) ?? formats[0];
+  const count = draft.slots.length;
+  const durationMs = Math.max(1, draft.slotSeconds) * 1000;
+
+  useEffect(() => {
+    if (!playing || count === 0) return undefined;
+    const id = setInterval(() => {
+      setPos(prev =>
+        prev.elapsed + PLAYER_TICK_MS >= durationMs
+          ? { index: (prev.index + 1) % count, elapsed: 0 }
+          : { index: prev.index, elapsed: prev.elapsed + PLAYER_TICK_MS },
+      );
+    }, PLAYER_TICK_MS);
+    return () => clearInterval(id);
+  }, [playing, count, durationMs]);
+
+  if (count === 0) return null;
+  const index = pos.index % count;
+  const slot = draft.slots[index];
+  const goTo = (i: number) => setPos({ index: (i + count) % count, elapsed: 0 });
+  const secondsLeft = Math.ceil((durationMs - pos.elapsed) / 1000);
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.panelHeader}>
+        <span>Digital Signage loop</span>
+        <span className={styles.panelHeaderMeta}>
+          {plural(count, 'slot')} x {draft.slotSeconds} sec = {getLoopSeconds(draft)} sec loop
+        </span>
+      </div>
+      <div className={styles.panelBody}>
+        <div className={css.playerTop}>
+          <p className={css.playerIntro}>
+            This is how the screens play the campaign: each slot shows for {draft.slotSeconds} seconds, then the next
+            one, and the loop repeats.
+          </p>
+          {formats.length > 1 && (
+            <label className={css.filter}>
+              <span className={styles.label}>Screen format</span>
+              <select className={styles.select} value={format.key} onChange={e => setFormatKey(e.target.value)}>
+                {formats.map(f => (
+                  <option key={f.key} value={f.key}>
+                    {f.label} ({plural(f.deviceCount, 'device')})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+
+        <div className={css.playerStage}>
+          <Ticket slot={slot} format={format} draft={draft} maxWidth={560} maxHeight={420} />
+        </div>
+
+        <div className={css.playerInfo}>
+          <span className={`${styles.badge} ${styles.badgeDark}`}>
+            Slot {index + 1} of {count}
+          </span>
+          <span className={styles.badge}>{slot.kind}</span>
+          <span className={css.playerTitle}>{slotTitle(slot, draft)}</span>
+          <span className={css.playerDesign}>{designName(slot, draft.clientId)}</span>
+        </div>
+
+        <div className={css.segments} aria-hidden="true">
+          {draft.slots.map((s, i) => {
+            const fill = i < index ? 100 : i === index ? (pos.elapsed / durationMs) * 100 : 0;
+            return (
+              <div key={s.id} className={css.segment}>
+                <div
+                  className={`${css.segmentFill} ${i === index ? css.segmentFillCurrent : ''}`}
+                  style={{ width: `${fill}%` }}
+                ></div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className={css.controls}>
+          <button type="button" className={styles.btnOutline} onClick={() => goTo(index - 1)}>
+            <ArrowLeftIcon size={14} /> Previous
+          </button>
+          <button
+            type="button"
+            className={`${styles.btnSmall} ${styles.btnSmallPink} ${css.playBtn}`}
+            onClick={() => setPlaying(p => !p)}
+          >
+            {playing ? <PauseIcon /> : <PlayIcon />} {playing ? 'Pause' : 'Play'}
+          </button>
+          <button type="button" className={styles.btnOutline} onClick={() => goTo(index + 1)}>
+            Next <ArrowRightIcon size={14} />
+          </button>
+          <span className={css.timeLeft}>{playing ? `Next slot in ${secondsLeft} sec` : 'Paused'}</span>
+        </div>
+
+        <div className={css.thumbStrip}>
+          {draft.slots.map((s, i) => (
+            <button
+              key={s.id}
+              type="button"
+              className={`${css.thumb} ${i === index ? css.thumbActive : ''}`}
+              onClick={() => goTo(i)}
+              aria-label={`Show slot ${i + 1}: ${s.kind}`}
+              aria-current={i === index ? 'true' : undefined}
+            >
+              <div className={css.thumbStage}>
+                <Ticket slot={s} format={format} draft={draft} maxWidth={112} maxHeight={72} />
+              </div>
+              <span className={css.thumbLabel}>
+                {i + 1}. {s.kind}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ---------- Step ----------
 
 const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors, goToStep }) => {
   const [tick, setTick] = useState<number | null>(null); // null = not generating
@@ -44,24 +229,18 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
   }, []);
 
   const formats = getRequiredFormats(draft);
-  const approved = draft.products.filter(p => p.approved);
-  const pairs: FormatTemplate[] = formats.flatMap(format => {
-    const template = TEMPLATE_BY_ID.get(draft.templateSelections[format.key] ?? '');
-    return template ? [{ format, template }] : [];
-  });
-  const missingTemplates = formats.length - pairs.length;
-  const total = approved.length * pairs.length;
+  const incomplete = draft.slots.filter(slot => !isSlotComplete(slot)).length;
 
-  if (formats.length === 0 || approved.length === 0 || missingTemplates > 0) {
+  if (formats.length === 0 || draft.slots.length === 0 || incomplete > 0) {
     const problem =
       formats.length === 0
         ? { text: 'No devices are selected, so there are no content formats to generate.', step: 5, action: 'Select Devices' }
-        : approved.length === 0
-          ? { text: 'No products are approved. Approve at least one product to generate content.', step: 7, action: 'Select Products' }
+        : draft.slots.length === 0
+          ? { text: 'The campaign has no slots. Add slots before generating content.', step: 8, action: 'Set Up Slots' }
           : {
-              text: `${plural(missingTemplates, 'format')} of ${formats.length} still ${missingTemplates === 1 ? 'needs' : 'need'} a template before content can be generated.`,
+              text: `${plural(incomplete, 'slot')} of ${draft.slots.length} still ${incomplete === 1 ? 'needs' : 'need'} a product and design (or a headline) before content can be generated.`,
               step: 8,
-              action: 'Select Templates',
+              action: 'Complete Slots',
             };
     return (
       <div className={styles.emptyState}>
@@ -76,6 +255,12 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
       </div>
     );
   }
+
+  const allOutputs = getSlotOutputs(draft);
+  const total = allOutputs.length;
+  const clientName = getClientPack(draft.clientId).name;
+  const signageFormats = formats.filter(f => f.media === 'signage');
+  const productSlotCount = draft.slots.filter(slot => isProductSlot(slot.kind)).length;
 
   const generate = () => {
     if (timer.current) clearInterval(timer.current);
@@ -107,7 +292,7 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
           <div className={css.progressFill} style={{ width: `${(tick / GENERATION_TICKS) * 100}%` }}></div>
         </div>
         <div className={styles.helpText}>
-          {done} of {plural(total, 'output')} rendered from the approved templates
+          {done} of {plural(total, 'output')} rendered with the {clientName} ticket designs
         </div>
       </div>
     );
@@ -116,16 +301,20 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
   const summary = (
     <div className={styles.statGrid}>
       <div className={styles.statCard}>
-        <div className={styles.statLabel}>Approved products</div>
-        <div className={styles.statValue}>{approved.length}</div>
+        <div className={styles.statLabel}>Slots</div>
+        <div className={styles.statValue}>{draft.slots.length}</div>
       </div>
       <div className={styles.statCard}>
         <div className={styles.statLabel}>Formats</div>
-        <div className={styles.statValue}>{pairs.length}</div>
+        <div className={styles.statValue}>{formats.length}</div>
       </div>
       <div className={styles.statCard}>
-        <div className={styles.statLabel}>Outputs ({approved.length} x {pairs.length})</div>
+        <div className={styles.statLabel}>Outputs</div>
         <div className={styles.statValue}>{total}</div>
+      </div>
+      <div className={styles.statCard}>
+        <div className={styles.statLabel}>Loop length</div>
+        <div className={styles.statValue}>{getLoopSeconds(draft)} sec</div>
       </div>
     </div>
   );
@@ -134,9 +323,10 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
     return (
       <div>
         <p className={styles.sectionIntro}>
-          Content is generated for every approved product in every required format, using the template selected for
-          that format. {plural(approved.length, 'approved product')} x {plural(pairs.length, 'format')} ={' '}
-          <strong>{plural(total, 'output')}</strong>.
+          Content is generated for every slot in every required format, using the {clientName} design chosen for
+          each slot. Digital Signage screens play all {plural(draft.slots.length, 'slot')} in turn ({draft.slotSeconds}{' '}
+          sec each). An ESL label shows one product, so ESL formats only get the{' '}
+          {plural(productSlotCount, 'product slot')}.
         </p>
 
         {summary}
@@ -160,26 +350,23 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
                   <th>Media</th>
                   <th>Format / size</th>
                   <th className={styles.numeric}>Devices</th>
-                  <th>Template</th>
-                  <th>Type</th>
+                  <th>Slots included</th>
                   <th className={styles.numeric}>Outputs</th>
                 </tr>
               </thead>
               <tbody>
-                {pairs.map(({ format, template }) => (
-                  <tr key={format.key}>
-                    <td>{mediaLabel(format.media)}</td>
-                    <td>{format.label}</td>
-                    <td className={styles.numeric}>{format.deviceCount}</td>
-                    <td>{template.name}</td>
-                    <td>
-                      <span className={`${styles.badge} ${template.kind === 'Animated' ? styles.badgeBlue : ''}`}>
-                        {template.kind}
-                      </span>
-                    </td>
-                    <td className={styles.numeric}>{approved.length}</td>
-                  </tr>
-                ))}
+                {formats.map(format => {
+                  const count = format.media === 'signage' ? draft.slots.length : productSlotCount;
+                  return (
+                    <tr key={format.key}>
+                      <td>{mediaLabel(format.media)}</td>
+                      <td>{format.label}</td>
+                      <td className={styles.numeric}>{format.deviceCount}</td>
+                      <td>{format.media === 'signage' ? 'All slots, as a loop' : 'Product slots only'}</td>
+                      <td className={styles.numeric}>{count}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -197,146 +384,172 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
     );
   }
 
-  // ----- Generated: preview each output by media type, format and size -----
+  // ----- Generated: play the signage loop, then preview each output by media type, format and size -----
   const changeFilters = (patch: Partial<Filters>) => {
     setFilters(prev => ({ ...prev, ...patch }));
     setVisible(PAGE_SIZE);
   };
 
-  const mediaOptions = unique(pairs.map(p => p.format.media));
-  const mediaPairs = pairs.filter(p => filters.media === ALL || p.format.media === filters.media);
-  const formatOptions = unique(mediaPairs.map(p => formatOf(p.format)));
-  const formatPairs = mediaPairs.filter(p => filters.format === ALL || formatOf(p.format) === filters.format);
-  const sizeOptions = unique(formatPairs.map(p => sizeOf(p.format)));
-  const shownPairs = formatPairs.filter(p => filters.size === ALL || sizeOf(p.format) === filters.size);
-  const shownProducts = approved.filter(p => filters.sku === ALL || p.sku === filters.sku);
-  const outputs = shownPairs.flatMap(pair => shownProducts.map(product => ({ ...pair, product })));
-  const isFiltered = filters.media !== ALL || filters.format !== ALL || filters.size !== ALL || filters.sku !== ALL;
+  const byMedia = allOutputs.filter(o => filters.media === ALL || o.format.media === filters.media);
+  const formatOptions = unique(byMedia.map(o => formatOf(o.format)));
+  const byFormat = byMedia.filter(o => filters.format === ALL || formatOf(o.format) === filters.format);
+  const sizeOptions = unique(byFormat.map(o => sizeOf(o.format)));
+  const bySize = byFormat.filter(o => filters.size === ALL || sizeOf(o.format) === filters.size);
+  const outputs: SlotOutput[] = bySize.filter(o => filters.slot === ALL || o.slot.id === filters.slot);
+  const mediaOptions = unique(formats.map(f => f.media));
+  const isFiltered = filters.media !== ALL || filters.format !== ALL || filters.size !== ALL || filters.slot !== ALL;
 
   return (
     <div>
       <div className={`${styles.alert} ${styles.alertSuccess}`}>
         <CheckIcon />
         <div>
-          {plural(total, 'output')} generated from {plural(approved.length, 'approved product')} in{' '}
-          {plural(pairs.length, 'format')}. Preview each output by media type, format and size below.
+          {plural(total, 'output')} generated from {plural(draft.slots.length, 'slot')} in{' '}
+          {plural(formats.length, 'format')}. Play the Digital Signage loop, or check each output below.
         </div>
       </div>
 
       {summary}
 
-      <div className={styles.toolbar}>
-        <div className={css.filters}>
-          <label className={css.filter}>
-            <span className={styles.label}>Media type</span>
-            <select
-              className={styles.select}
-              value={filters.media}
-              onChange={e => changeFilters({ media: e.target.value as Filters['media'], format: ALL, size: ALL })}
-            >
-              <option value={ALL}>All media</option>
-              {mediaOptions.map(media => (
-                <option key={media} value={media}>
-                  {mediaLabel(media)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={css.filter}>
-            <span className={styles.label}>Format</span>
-            <select
-              className={styles.select}
-              value={filters.format}
-              onChange={e => changeFilters({ format: e.target.value, size: ALL })}
-            >
-              <option value={ALL}>All formats</option>
-              {formatOptions.map(option => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={css.filter}>
-            <span className={styles.label}>Size</span>
-            <select className={styles.select} value={filters.size} onChange={e => changeFilters({ size: e.target.value })}>
-              <option value={ALL}>All sizes</option>
-              {sizeOptions.map(option => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={css.filter}>
-            <span className={styles.label}>Product</span>
-            <select className={styles.select} value={filters.sku} onChange={e => changeFilters({ sku: e.target.value })}>
-              <option value={ALL}>All products</option>
-              {approved.map(product => (
-                <option key={product.sku} value={product.sku}>
-                  {product.description} {product.size}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className={styles.toolbarGroup}>
-          {isFiltered && (
-            <button type="button" className={styles.btnOutline} onClick={() => changeFilters(NO_FILTERS)}>
-              Clear filters
-            </button>
-          )}
-          <button type="button" className={styles.btnOutline} onClick={generate}>
-            <RefreshIcon size={14} /> Regenerate Content
-          </button>
-        </div>
+      <div className={css.regenerateRow}>
+        <button type="button" className={styles.btnOutline} onClick={generate}>
+          <RefreshIcon size={14} /> Regenerate Content
+        </button>
       </div>
 
-      <div className={css.resultCount}>
-        Showing {Math.min(visible, outputs.length)} of {plural(outputs.length, 'output')}
-        {isFiltered && ` (${total} in total)`}
-      </div>
-
-      {outputs.length === 0 ? (
-        <div className={styles.emptyState}>No outputs match these filters.</div>
+      {signageFormats.length > 0 ? (
+        <SignagePlayer draft={draft} formats={signageFormats} />
       ) : (
-        <div className={css.outputGrid}>
-          {outputs.slice(0, visible).map(({ format, template, product }) => (
-            <article key={`${format.key}|${product.sku}`} className={css.outputCard}>
-              <div className={css.stage}>
-                <ContentPreview template={template} format={format} product={product} size="large" />
-              </div>
-              <div className={css.outputBody}>
-                <div className={css.outputTitle}>
-                  {product.description} <span className={css.outputSize}>{product.size}</span>
-                </div>
-                <div className={css.outputBadges}>
-                  <span className={`${styles.badge} ${styles.badgePink}`}>{mediaLabel(format.media)}</span>
-                  <span className={`${styles.badge} ${template.kind === 'Animated' ? styles.badgeBlue : ''}`}>
-                    {template.kind}
-                  </span>
-                </div>
-                <dl className={css.outputMeta}>
-                  <dt>Format / size</dt>
-                  <dd>{format.label}</dd>
-                  <dt>Template</dt>
-                  <dd>{template.name}</dd>
-                  <dt>Devices</dt>
-                  <dd>{format.deviceCount}</dd>
-                </dl>
-              </div>
-            </article>
-          ))}
+        <div className={styles.alert}>
+          <AlertIcon />
+          <div>This campaign has no Digital Signage screens, so there is no loop to play. ESL outputs are below.</div>
         </div>
       )}
 
-      {outputs.length > visible && (
-        <div className={css.generateRow}>
-          <button type="button" className={styles.btnOutline} onClick={() => setVisible(v => v + PAGE_SIZE)}>
-            Show more ({outputs.length - visible} remaining)
-          </button>
+      <div className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <span>All outputs</span>
+          <span className={styles.panelHeaderMeta}>
+            Showing {Math.min(visible, outputs.length)} of {plural(outputs.length, 'output')}
+            {isFiltered && ` (${total} in total)`}
+          </span>
         </div>
-      )}
+        <div className={styles.panelBody}>
+          <div className={styles.toolbar}>
+            <div className={css.filters}>
+              <label className={css.filter}>
+                <span className={styles.label}>Media type</span>
+                <select
+                  className={styles.select}
+                  value={filters.media}
+                  onChange={e => changeFilters({ media: e.target.value as Filters['media'], format: ALL, size: ALL })}
+                >
+                  <option value={ALL}>All media</option>
+                  {mediaOptions.map(media => (
+                    <option key={media} value={media}>
+                      {mediaLabel(media)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={css.filter}>
+                <span className={styles.label}>Format</span>
+                <select
+                  className={styles.select}
+                  value={filters.format}
+                  onChange={e => changeFilters({ format: e.target.value, size: ALL })}
+                >
+                  <option value={ALL}>All formats</option>
+                  {formatOptions.map(option => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={css.filter}>
+                <span className={styles.label}>Size</span>
+                <select
+                  className={styles.select}
+                  value={filters.size}
+                  onChange={e => changeFilters({ size: e.target.value })}
+                >
+                  <option value={ALL}>All sizes</option>
+                  {sizeOptions.map(option => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={css.filter}>
+                <span className={styles.label}>Slot</span>
+                <select
+                  className={styles.select}
+                  value={filters.slot}
+                  onChange={e => changeFilters({ slot: e.target.value })}
+                >
+                  <option value={ALL}>All slots</option>
+                  {draft.slots.map((slot, i) => (
+                    <option key={slot.id} value={slot.id}>
+                      {i + 1}. {slot.kind}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {isFiltered && (
+              <button type="button" className={styles.btnOutline} onClick={() => changeFilters(NO_FILTERS)}>
+                Clear filters
+              </button>
+            )}
+          </div>
+
+          {outputs.length === 0 ? (
+            <div className={styles.emptyState}>
+              No outputs match these filters.
+              {filters.media === 'esl' && filters.slot !== ALL && ' ESL labels only show product slots.'}
+            </div>
+          ) : (
+            <div className={css.outputGrid}>
+              {outputs.slice(0, visible).map(({ slot, slotNumber, format }) => (
+                <article key={`${format.key}|${slot.id}`} className={css.outputCard}>
+                  <div className={css.stage}>
+                    <Ticket slot={slot} format={format} draft={draft} maxWidth={216} maxHeight={200} />
+                  </div>
+                  <div className={css.outputBody}>
+                    <div className={css.outputTitle}>
+                      Slot {slotNumber}: {slotTitle(slot, draft)}
+                    </div>
+                    <div className={css.outputBadges}>
+                      <span className={`${styles.badge} ${format.media === 'esl' ? styles.badgeBlue : styles.badgePink}`}>
+                        {mediaLabel(format.media)}
+                      </span>
+                      <span className={styles.badge}>{slot.kind}</span>
+                    </div>
+                    <dl className={css.outputMeta}>
+                      <dt>Design</dt>
+                      <dd>{designName(slot, draft.clientId)}</dd>
+                      <dt>Format / size</dt>
+                      <dd>{format.label}</dd>
+                      <dt>Devices</dt>
+                      <dd>{format.deviceCount}</dd>
+                    </dl>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {outputs.length > visible && (
+            <div className={css.generateRow}>
+              <button type="button" className={styles.btnOutline} onClick={() => setVisible(v => v + PAGE_SIZE)}>
+                Show more ({outputs.length - visible} remaining)
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import styles from '../wizard.module.css';
 import local from './Step07Products.module.css';
-import { CONTENT_TYPES } from '../options';
+import { PRODUCT_SLOT_KINDS } from '../options';
 import { PRODUCT_CATALOG } from '../mockData';
-import { formatCurrency } from '../helpers';
+import { addProductSlots, formatCurrency, getStoreRanging, isProductSlot } from '../helpers';
 import { AlertIcon, CheckIcon, CloseIcon, PlusIcon, RefreshIcon, SearchIcon, SparkleIcon, TrashIcon } from '../icons';
-import type { CampaignProduct, CatalogProduct, StepProps } from '../types';
+import type { CampaignProduct, CatalogProduct, StepProps, Store } from '../types';
 import { describeDataSources, describeProductSource } from './promptBuilder';
 import {
   CATALOG_BY_SKU,
@@ -20,22 +20,63 @@ import {
 
 const MAX_SEARCH_RESULTS = 6;
 
-const Step07Products: React.FC<StepProps> = ({ draft, update, errors, showErrors, goToStep }) => {
+const MAX_STORES_LISTED = 12;
+
+const storeNames = (stores: Store[]) => {
+  const names = stores.slice(0, MAX_STORES_LISTED).map(store => `${store.name} (${store.code})`);
+  if (stores.length > MAX_STORES_LISTED) names.push(`and ${stores.length - MAX_STORES_LISTED} more`);
+  return names.join(', ');
+};
+
+/** Which of the campaign's stores sell a product, so the user knows where its ad makes sense. */
+const StoreRangingList: React.FC<{ sold: Store[]; notSold: Store[] }> = ({ sold, notSold }) => (
+  <div className={local.ranging}>
+    <div>
+      <strong className={local.rangingSold}>Sold in {sold.length}:</strong> {sold.length > 0 ? storeNames(sold) : 'none of the selected stores'}
+    </div>
+    {notSold.length > 0 && (
+      <>
+        <div>
+          <strong className={local.rangingNotSold}>Not sold in {notSold.length}:</strong> {storeNames(notSold)}
+        </div>
+        <div className={local.sub}>
+          The campaign plays in every selected store, so screens in these stores would advertise a product that is not on
+          their shelves.
+        </div>
+      </>
+    )}
+  </div>
+);
+
+const Step07Products: React.FC<StepProps> = ({ draft, update, goToStep }) => {
   const { products } = draft;
   const [generating, setGenerating] = useState(false);
   const [noMatches, setNoMatches] = useState(false);
   const [replacingSku, setReplacingSku] = useState<string | null>(null);
   const [reasonSku, setReasonSku] = useState<string | null>(null);
+  const [storesSku, setStoresSku] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
   const userSelectedOnly = draft.brief.productSource === 'User-selected products';
   const storeCount = draft.storeIds.length;
   const approvedCount = products.filter(p => p.approved).length;
+  const messageSlots = draft.slots.filter(slot => !isProductSlot(slot.kind));
+  const messageBreakdown = Array.from(new Set(messageSlots.map(slot => slot.kind)))
+    .map(kind => `${messageSlots.filter(slot => slot.kind === kind).length} ${kind.toLowerCase()}`)
+    .join(', ');
   const aiCount = products.filter(p => p.source === 'ai').length;
   const inList = new Set(products.map(p => p.sku));
   const available = PRODUCT_CATALOG.filter(p => !inList.has(p.sku));
 
-  const baseContentTypes = draft.brief.contentRequired.length > 0 ? draft.brief.contentRequired : CONTENT_TYPES;
+  // The slot plan from step 6 decides what each product is used for; this step only needs enough products.
+  const productSlots = draft.slots.filter(slot => isProductSlot(slot.kind));
+  const slotBreakdown = PRODUCT_SLOT_KINDS.map(kind => ({
+    kind,
+    count: productSlots.filter(slot => slot.kind === kind).length,
+  }))
+    .filter(item => item.count > 0)
+    .map(item => `${item.count} ${item.kind.toLowerCase()}`)
+    .join(', ');
 
   const term = query.trim().toLowerCase();
   const matches = term
@@ -73,13 +114,6 @@ const Step07Products: React.FC<StepProps> = ({ draft, update, errors, showErrors
     update({ products: [...products, createUserProduct(product, draft)] });
     setNoMatches(false);
   };
-
-  const errorAlert = showErrors && errors.products && (
-    <div className={`${styles.alert} ${styles.alertError}`}>
-      <AlertIcon />
-      <div>{errors.products}</div>
-    </div>
-  );
 
   const addPanel = (
     <div className={styles.panel}>
@@ -150,8 +184,52 @@ const Step07Products: React.FC<StepProps> = ({ draft, update, errors, showErrors
         <strong>Data source:</strong> {describeDataSources(draft.brief)} | <strong>Products:</strong>{' '}
         {describeProductSource(draft.brief)}
       </div>
+      {draft.slots.length > 0 && (
+        <div className={`${styles.alert} ${approvedCount === productSlots.length ? styles.alertSuccess : styles.alertError}`}>
+          {approvedCount === productSlots.length ? <CheckIcon /> : <AlertIcon />}
+          <div>
+            <div>
+              Your plan (step 6) has <strong>{draft.slots.length} slots</strong>:{' '}
+              <strong>
+                {productSlots.length} need{productSlots.length === 1 ? 's' : ''} a product
+              </strong>
+              {slotBreakdown && ` (${slotBreakdown})`}
+              {messageSlots.length > 0 && (
+                <>
+                  {' '}and {messageSlots.length} {messageSlots.length === 1 ? 'is a message' : 'are messages'} with no product (
+                  {messageBreakdown})
+                </>
+              )}
+              .
+            </div>
+            <div className={local.bannerStatus}>
+              {approvedCount === productSlots.length &&
+                `${approvedCount} of ${productSlots.length} products approved: one for each product slot. You can continue.`}
+              {approvedCount < productSlots.length &&
+                `${approvedCount} of ${productSlots.length} products approved. Approve ${productSlots.length - approvedCount} more to continue.`}
+              {approvedCount > productSlots.length &&
+                `${approvedCount} products approved for ${productSlots.length} product slots: ${approvedCount - productSlots.length} too many. Unapprove or remove ${approvedCount - productSlots.length}, or add slots, to continue.`}
+            </div>
+            {approvedCount > productSlots.length && (
+              <div className={local.bannerActions}>
+                <button
+                  type="button"
+                  className={`${styles.btnSmall} ${styles.btnSmallDark}`}
+                  onClick={() => update({ slots: addProductSlots(draft.slots, approvedCount - productSlots.length) })}
+                >
+                  <PlusIcon size={14} /> Add {approvedCount - productSlots.length} product slot
+                  {approvedCount - productSlots.length === 1 ? '' : 's'} to the plan
+                </button>
+                <span className={local.sub}>
+                  The loop becomes {draft.slots.length + approvedCount - productSlots.length} slots x {draft.slotSeconds} sec ={' '}
+                  {(draft.slots.length + approvedCount - productSlots.length) * draft.slotSeconds} sec.
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
-      {errorAlert}
 
       {noMatches && (
         <div className={`${styles.alert} ${styles.alertWarning}`}>
@@ -226,28 +304,30 @@ const Step07Products: React.FC<StepProps> = ({ draft, update, errors, showErrors
             <table className={`${styles.table} ${local.productTable}`}>
               <thead>
                 <tr>
+                  <th>SKU</th>
                   <th>Product</th>
-                  <th className={styles.numeric}>Price</th>
+                  <th className={styles.numeric}>Promo price</th>
+                  <th className={styles.numeric}>Was price</th>
+                  <th className={styles.numeric}>Save</th>
                   <th className={styles.numeric}>Margin</th>
                   <th>Stock and stores</th>
-                  <th>Content type</th>
                   <th className={local.actionsCol}></th>
                 </tr>
               </thead>
               <tbody>
                 {products.map(product => {
                   const catalog = getCatalogProduct(product.sku, draft);
-                  const contentTypes = baseContentTypes.includes(product.contentType)
-                    ? baseContentTypes
-                    : [product.contentType, ...baseContentTypes];
                   const reasonOpen = reasonSku === product.sku;
+                  const storesOpen = storesSku === product.sku;
+                  const ranging = storesOpen ? getStoreRanging(product.sku, draft) : null;
                   return (
                     <React.Fragment key={product.sku}>
                       <tr>
+                        <td className={local.sku}>{product.sku}</td>
                         <td className={local.description}>
                           {product.description}
                           <div className={local.sub}>
-                            SKU {product.sku} | {product.size}
+                            {product.size}
                             {product.source === 'manual' && ' | Added by you'}
                           </div>
                           <button
@@ -259,34 +339,24 @@ const Step07Products: React.FC<StepProps> = ({ draft, update, errors, showErrors
                             {reasonOpen ? 'Hide reason' : product.source === 'ai' ? 'Why recommended?' : 'Details'}
                           </button>
                         </td>
+                        <td className={`${styles.numeric} ${local.promoPrice}`}>{formatCurrency(product.promoPrice)}</td>
+                        <td className={styles.numeric}>{formatCurrency(product.regularPrice)}</td>
                         <td className={styles.numeric}>
-                          <span className={local.promoPrice}>{formatCurrency(product.promoPrice)}</span>
-                          <div className={local.sub}>Was {formatCurrency(product.regularPrice)}</div>
-                          <div className={local.sub}>
-                            Save {formatCurrency(savingAmount(product))} ({savingPct(product)}%)
-                          </div>
+                          {formatCurrency(savingAmount(product))}
+                          <div className={local.sub}>{savingPct(product)}% off</div>
                         </td>
                         <td className={styles.numeric}>{product.marginPct}%</td>
                         <td className={local.stock}>
                           {formatNumber(product.stockOnHand)} units
                           {catalog && <div className={local.sub}>{weeksOfCover(catalog).toFixed(1)} weeks of cover</div>}
-                          <div className={local.sub}>
-                            Eligible in {product.eligibleStores} of {storeCount} stores
-                          </div>
-                        </td>
-                        <td>
-                          <select
-                            className={`${styles.select} ${local.contentSelect}`}
-                            value={product.contentType}
-                            aria-label={`Content type for ${product.description}`}
-                            onChange={e => patchProduct(product.sku, { contentType: e.target.value })}
+                          <button
+                            type="button"
+                            className={`${local.whyBtn} ${product.eligibleStores < storeCount ? local.storesWarn : ''}`}
+                            aria-expanded={storesOpen}
+                            onClick={() => setStoresSku(storesOpen ? null : product.sku)}
                           >
-                            {contentTypes.map(type => (
-                              <option key={type} value={type}>
-                                {type}
-                              </option>
-                            ))}
-                          </select>
+                            Sold in {product.eligibleStores} of {storeCount} stores {storesOpen ? '▲' : '▼'}
+                          </button>
                         </td>
                         <td className={local.actionsCol}>
                           <div className={`${styles.rowActions} ${local.actions}`}>
@@ -321,14 +391,21 @@ const Step07Products: React.FC<StepProps> = ({ draft, update, errors, showErrors
                       </tr>
                       {reasonOpen && (
                         <tr className={local.replaceRow}>
-                          <td colSpan={6}>
+                          <td colSpan={8}>
                             <strong>AI recommendation reason:</strong> {product.reason}
+                          </td>
+                        </tr>
+                      )}
+                      {ranging && (
+                        <tr className={local.replaceRow}>
+                          <td colSpan={8}>
+                            <StoreRangingList sold={ranging.sold} notSold={ranging.notSold} />
                           </td>
                         </tr>
                       )}
                       {replacingSku === product.sku && (
                         <tr className={local.replaceRow}>
-                          <td colSpan={6}>
+                          <td colSpan={8}>
                             <div className={local.replaceBar}>
                               <span>
                                 Replace {product.sku} {product.description} with:

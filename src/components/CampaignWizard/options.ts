@@ -68,14 +68,32 @@ export const EXTERNAL_FACTORS = [
   'Time of day',
 ];
 
-export const CONTENT_TYPES = [
+/** What a slot shows. Product slots carry a product and a ticket design; the rest carry a message. */
+export const SLOT_KINDS = [
   'Product promotion',
+  'Loyalty advert',
+  'Seasonal greeting',
+  'Opening hours',
+  'Store-wide offer',
   'Category promotion',
   'Brand advert',
-  'Loyalty message',
-  'Store-wide offer',
-  'Opening hours',
 ];
+
+export const PRODUCT_SLOT_KINDS = ['Product promotion', 'Loyalty advert'];
+
+/** The specification's "Content required" options are the slot kinds. */
+export const CONTENT_TYPES = SLOT_KINDS;
+
+export const MIN_SLOT_SECONDS = 3;
+export const MAX_SLOT_SECONDS = 60;
+export const DEFAULT_SLOT_SECONDS = 8;
+export const MAX_SLOTS = 20;
+
+export const SLOT_PRESETS = [
+  { label: '8 slots x 8 sec', slots: 8, seconds: 8 },
+  { label: '6 slots x 7 sec', slots: 6, seconds: 7 },
+];
+
 
 /** ESL campaigns must allow no more than four content changes per day. */
 export const ESL_MAX_CHANGES_PER_DAY = 4;
@@ -88,7 +106,7 @@ export const WIZARD_STEPS = [
   { step: 5, label: 'Devices', title: 'Select Campaign Devices' },
   { step: 6, label: 'Campaign Brief', title: 'Build Campaign Brief' },
   { step: 7, label: 'Products & Content', title: 'Select Products and Content' },
-  { step: 8, label: 'Templates', title: 'Select Templates' },
+  { step: 8, label: 'Slots & Designs', title: 'Select Templates for Each Slot' },
   { step: 9, label: 'Generate & Preview', title: 'Generate and Preview Content' },
   { step: 10, label: 'Review', title: 'Review Campaign' },
   { step: 11, label: 'Create & Schedule', title: 'Create and Schedule Campaign' },

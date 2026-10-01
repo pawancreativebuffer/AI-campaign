@@ -1,25 +1,104 @@
-import { DEVICES, ESL_COLOUR_LABELS, PRODUCT_CATALOG, STORES, TEMPLATES } from './mockData';
-import { DATA_SOURCES } from './options';
+import { DEVICES, ESL_COLOUR_LABELS, PRODUCT_CATALOG, STORES } from './mockData';
+import { LOGGED_IN_CLIENT_ID, getClientPack } from './clients';
+import { DATA_SOURCES, DEFAULT_SLOT_SECONDS, PRODUCT_SLOT_KINDS, SLOT_KINDS } from './options';
 import type {
   CampaignBrief,
   CampaignDraft,
+  CampaignSlot,
+  TicketType,
   ContentFormat,
   Device,
   DeviceMedia,
   MediaChoice,
   Store,
-  Template,
 } from './types';
 
 export const STORE_BY_ID = new Map<string, Store>(STORES.map(s => [s.id, s]));
 export const DEVICE_BY_ID = new Map<string, Device>(DEVICES.map(d => [d.id, d]));
-export const TEMPLATE_BY_ID = new Map<string, Template>(TEMPLATES.map(t => [t.id, t]));
 const CATALOG_PCT_BY_SKU = new Map<string, number>(PRODUCT_CATALOG.map(p => [p.sku, p.eligibleStorePct]));
+
+export function isProductSlot(kind: string): boolean {
+  return PRODUCT_SLOT_KINDS.includes(kind);
+}
+
+export function createSlot(id: string, kind = 'Product promotion'): CampaignSlot {
+  return { id, kind, productSku: '', ticketType: '', headline: '', body: '' };
+}
+
+/** A slot id not used by any of the given slots. */
+export function nextSlotId(slots: CampaignSlot[]): string {
+  const used = slots.map(slot => Number(slot.id.replace('slot-', ''))).filter(Number.isFinite);
+  return `slot-${(used.length > 0 ? Math.max(...used) : 0) + 1}`;
+}
+
+/** The slot plan with `count` extra 'Product promotion' slots added after the last product slot. */
+export function addProductSlots(slots: CampaignSlot[], count: number): CampaignSlot[] {
+  const next = [...slots];
+  const lastProduct = next.map(slot => isProductSlot(slot.kind)).lastIndexOf(true);
+  const added: CampaignSlot[] = [];
+  for (let i = 0; i < count; i++) added.push(createSlot(nextSlotId([...next, ...added])));
+  next.splice(lastProduct + 1, 0, ...added);
+  return next;
+}
+
+/** The structure from the client's example: promotions, a loyalty advert, a greeting and opening hours. */
+export function createDefaultSlots(): CampaignSlot[] {
+  const kinds = [
+    'Product promotion',
+    'Product promotion',
+    'Product promotion',
+    'Product promotion',
+    'Product promotion',
+    'Loyalty advert',
+    'Seasonal greeting',
+    'Opening hours',
+  ];
+  return kinds.map((kind, i) => createSlot(`slot-${i + 1}`, kind));
+}
+
+export function slotKindsInUse(slots: CampaignSlot[]): string[] {
+  return SLOT_KINDS.filter(kind => slots.some(slot => slot.kind === kind));
+}
+
+/** The design a product slot starts with, from the client's pack, the slot and the campaign objective. */
+export function defaultTicketType(kind: string, objective: string, clientId: string): TicketType {
+  const pack = getClientPack(clientId);
+  if (kind === 'Loyalty advert') return pack.loyaltyDesign;
+  return pack.objectiveDesigns[objective] ?? pack.designs[0]?.id ?? '';
+}
+
+/**
+ * Fills empty product slots with approved products not yet used, in order,
+ * and gives every product slot a ticket design. Slots already filled are kept.
+ */
+export function autoAssignSlots(draft: CampaignDraft): CampaignSlot[] {
+  const approved = draft.products.filter(p => p.approved).map(p => p.sku);
+  const used = new Set(draft.slots.map(slot => slot.productSku).filter(Boolean));
+  const free = approved.filter(sku => !used.has(sku));
+  return draft.slots.map(slot => {
+    if (!isProductSlot(slot.kind)) return slot;
+    const productSku = slot.productSku || free.shift() || '';
+    const ticketType = slot.ticketType || defaultTicketType(slot.kind, draft.objective, draft.clientId);
+    return productSku === slot.productSku && ticketType === slot.ticketType ? slot : { ...slot, productSku, ticketType };
+  });
+}
+
+/** Seconds for one full pass through every slot on Digital Signage. */
+export function getLoopSeconds(draft: Pick<CampaignDraft, 'slots' | 'slotSeconds'>): number {
+  return draft.slots.length * draft.slotSeconds;
+}
+
+/** Pixel size of a format, e.g. Landscape 1920x1080 or ESL 300x400. */
+export function getPixelSize(format: ContentFormat): { width: number; height: number } {
+  const [width, height] = (format.media === 'signage' ? format.resolution : format.eslSize).split('x').map(Number);
+  return { width: width || 1, height: height || 1 };
+}
 
 export function createEmptyDraft(): CampaignDraft {
   return {
     id: '',
     status: 'Draft',
+    clientId: LOGGED_IN_CLIENT_ID,
     name: '',
     objective: '',
     owner: '',
@@ -43,12 +122,13 @@ export function createEmptyDraft(): CampaignDraft {
       productSourceDetail: '',
       productFile: null,
       externalFactors: [],
-      contentRequired: [],
+      contentRequired: slotKindsInUse(createDefaultSlots()),
       additionalRules: [],
     },
     prompt: '',
+    slotSeconds: DEFAULT_SLOT_SECONDS,
+    slots: createDefaultSlots(),
     products: [],
-    templateSelections: {},
     contentGenerated: false,
   };
 }
@@ -123,21 +203,6 @@ export function getRequiredFormats(draft: CampaignDraft): ContentFormat[] {
   return Array.from(formats.values()).sort((a, b) => a.key.localeCompare(b.key));
 }
 
-export function isTemplateCompatible(template: Template, format: ContentFormat): boolean {
-  if (template.media !== format.media) return false;
-  if (format.media === 'signage') {
-    if (template.orientation !== 'Any' && template.orientation !== format.orientation) return false;
-    return template.resolutions.length === 0 || template.resolutions.includes(format.resolution);
-  }
-  if (template.kind !== 'Static') return false; // ESL content must always be static
-  if (template.eslSizes.length > 0 && !template.eslSizes.includes(format.eslSize)) return false;
-  return template.eslColours.length === 0 || template.eslColours.includes(format.eslColour);
-}
-
-export function getCompatibleTemplates(format: ContentFormat): Template[] {
-  return TEMPLATES.filter(t => isTemplateCompatible(t, format));
-}
-
 export function timeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
@@ -197,14 +262,37 @@ export function toggleValue<T>(values: T[], value: T): T[] {
  * devices follow stores and media, template choices follow devices, and
  * generated content is discarded when anything it was built from changes.
  */
+/**
+ * Whether a store sells (ranges) a product. Mock: a stable pseudo-random pick per store and SKU
+ * at the product's ranging rate. In the real product this comes from the store ranging data.
+ */
+export function isRangedInStore(sku: string, storeId: string): boolean {
+  const pct = CATALOG_PCT_BY_SKU.get(sku) ?? 1;
+  // FNV-1a with a final mix, so neighbouring store codes do not get similar results.
+  let hash = 0x811c9dc5;
+  for (const char of `${sku}:${storeId}`) hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193);
+  hash = Math.imul(hash ^ (hash >>> 15), 0x2c1b3c6d);
+  hash ^= hash >>> 13;
+  return (hash >>> 0) / 0x100000000 < pct;
+}
+
+/** The selected stores, split into those that sell the product and those that do not. */
+export function getStoreRanging(sku: string, draft: Pick<CampaignDraft, 'storeIds'>): { sold: Store[]; notSold: Store[] } {
+  const stores = draft.storeIds.map(id => STORE_BY_ID.get(id)).filter((s): s is Store => !!s);
+  return {
+    sold: stores.filter(store => isRangedInStore(sku, store.id)),
+    notSold: stores.filter(store => !isRangedInStore(sku, store.id)),
+  };
+}
+
 export function applyDraftPatch(prev: CampaignDraft, patch: Partial<CampaignDraft>): CampaignDraft {
   const next: CampaignDraft = { ...prev, ...patch };
 
   if ('storeIds' in patch && !('products' in patch)) {
-    next.products = next.products.map(product => {
-      const pct = CATALOG_PCT_BY_SKU.get(product.sku);
-      return pct === undefined ? product : { ...product, eligibleStores: Math.round(pct * next.storeIds.length) };
-    });
+    next.products = next.products.map(product => ({
+      ...product,
+      eligibleStores: getStoreRanging(product.sku, next).sold.length,
+    }));
   }
 
   if ('storeIds' in patch || 'media' in patch) {
@@ -212,11 +300,25 @@ export function applyDraftPatch(prev: CampaignDraft, patch: Partial<CampaignDraf
     next.deviceIds = next.deviceIds.filter(id => allowed.has(id));
   }
 
-  if ('storeIds' in patch || 'media' in patch || 'deviceIds' in patch) {
-    const keys = new Set(getRequiredFormats(next).map(f => f.key));
-    next.templateSelections = Object.fromEntries(
-      Object.entries(next.templateSelections).filter(([key]) => keys.has(key)),
-    );
+  // Designs belong to a client's template pack, so a new client means choosing designs again.
+  if ('clientId' in patch && patch.clientId !== prev.clientId) {
+    next.slots = next.slots.map(slot => (slot.ticketType ? { ...slot, ticketType: '' } : slot));
+    next.contentGenerated = false;
+  }
+
+  // The specification's "Content required" is whatever the slots show.
+  if ('slots' in patch) {
+    next.brief = { ...next.brief, contentRequired: slotKindsInUse(next.slots) };
+  }
+
+  // A slot can only show a product that is still approved.
+  if ('products' in patch) {
+    const approved = new Set(next.products.filter(p => p.approved).map(p => p.sku));
+    if (next.slots.some(slot => slot.productSku && !approved.has(slot.productSku))) {
+      next.slots = next.slots.map(slot =>
+        slot.productSku && !approved.has(slot.productSku) ? { ...slot, productSku: '' } : slot,
+      );
+    }
   }
 
   const invalidatesContent =
@@ -224,7 +326,8 @@ export function applyDraftPatch(prev: CampaignDraft, patch: Partial<CampaignDraf
     'media' in patch ||
     'deviceIds' in patch ||
     'products' in patch ||
-    'templateSelections' in patch;
+    'slots' in patch ||
+    'slotSeconds' in patch;
   if (invalidatesContent && !('contentGenerated' in patch)) {
     next.contentGenerated = false;
   }

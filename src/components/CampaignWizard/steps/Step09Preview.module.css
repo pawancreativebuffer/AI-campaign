@@ -8,6 +8,12 @@
   margin-top: var(--spacing-lg);
 }
 
+.regenerateRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--spacing-md);
+}
+
 .generating {
   display: flex;
   flex-direction: column;
@@ -38,6 +44,147 @@
   transition: width 0.15s linear;
 }
 
+/* ---------- Digital Signage loop player ---------- */
+.playerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.playerIntro {
+  flex: 1;
+  min-width: 260px;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.playerStage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 360px;
+  padding: var(--spacing-md);
+  border-radius: 8px;
+  background-color: #2b2b36;
+  overflow: hidden;
+}
+
+.playerInfo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: 12px;
+}
+
+.playerTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2b2b36;
+}
+
+.playerDesign {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.segments {
+  display: flex;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.segment {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background-color: #e5e7eb;
+  overflow: hidden;
+}
+
+.segmentFill {
+  height: 100%;
+  background-color: var(--primary-pink);
+}
+
+.segmentFillCurrent {
+  transition: width 0.1s linear;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: 12px;
+}
+
+.playBtn {
+  min-width: 96px;
+}
+
+.timeLeft {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.thumbStrip {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  padding-bottom: 4px;
+  overflow-x: auto;
+}
+
+.thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  width: 132px;
+  padding: 8px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.thumb:hover {
+  border-color: #d1d5db;
+}
+
+.thumbActive,
+.thumbActive:hover {
+  border-color: var(--primary-pink);
+}
+
+.thumbStage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 112px;
+  height: 72px;
+  overflow: hidden;
+}
+
+.thumbLabel {
+  width: 100%;
+  font-size: 13px;
+  color: #374151;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- All outputs ---------- */
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -47,28 +194,23 @@
 .filter {
   display: flex;
   flex-direction: column;
-  width: 200px;
+  width: 220px;
 }
 
 .filter span {
   margin-bottom: 4px;
 }
 
-.resultCount {
-  font-size: 14px;
-  color: var(--text-muted);
-  margin-bottom: var(--spacing-md);
-}
-
 .outputGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: var(--spacing-md);
 }
 
 .outputCard {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background-color: white;
@@ -80,10 +222,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 332px;
+  height: 232px;
   padding: var(--spacing-md);
   background-color: var(--secondary-bg);
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 .outputBody {
@@ -95,11 +237,6 @@
   font-size: 15px;
   font-weight: 600;
   color: #2b2b36;
-}
-
-.outputSize {
-  font-weight: 400;
-  color: var(--text-muted);
 }
 
 .outputBadges {
@@ -123,10 +260,4 @@
 .outputMeta dd {
   color: #2b2b36;
   font-weight: 500;
-}
-
-@media (max-width: 1100px) {
-  .outputGrid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
 }

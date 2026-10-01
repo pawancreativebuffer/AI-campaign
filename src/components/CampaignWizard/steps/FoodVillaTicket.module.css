@@ -1,0 +1,573 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;500;700;800;900&display=swap');
+
+/* Food Villa ticket. All geometry is set inline in design pixels; this file holds colours and type. */
+
+.outer {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+  background: #fff;
+}
+
+.ticket {
+  /* Brand colours; ESL colour modes below override them. */
+  --fv-red: #cc0000;
+  --fv-yellow: #ffd700;
+  --fv-yellow-text: #ffd700;
+  --fv-yellow-streak: #ffe680;
+  --fv-yellow-edge: transparent;
+  --fv-red-streak: #e47c7c;
+  --fv-black-streak: #6e6e6e;
+
+  /* Per-design tokens (defaults = Special Price). */
+  --sw: var(--fv-yellow);
+  --sw-streak: var(--fv-yellow-streak);
+  --sw-edge: var(--fv-yellow-edge);
+  --lbl: var(--fv-red);
+  --lbl-accent: var(--fv-red);
+  --bar: var(--fv-yellow);
+  --bar-edge: var(--fv-yellow-edge);
+  --bar-save: var(--fv-red);
+  --bar-fg: #000;
+  --mark: #fff;
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  overflow: hidden;
+  background: #fff;
+  color: #000;
+  font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+  font-stretch: condensed;
+  line-height: 1.1;
+  text-align: left;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ticket * {
+  box-sizing: border-box;
+}
+
+/* ---- ticket types ---- */
+.typeSP {
+}
+
+.typeSALE {
+  --sw: var(--fv-red);
+  --sw-streak: var(--fv-red-streak);
+  --sw-edge: transparent;
+  --lbl: #fff;
+  --lbl-accent: #fff;
+  --bar: var(--fv-red);
+  --bar-edge: transparent;
+  --bar-save: #fff;
+  --bar-fg: #fff;
+}
+
+.typeCLR {
+  --sw: #000;
+  --sw-streak: var(--fv-black-streak);
+  --sw-edge: transparent;
+  --lbl: var(--fv-yellow-text);
+  --lbl-accent: var(--fv-yellow-text);
+  --bar: #000;
+  --bar-edge: transparent;
+  --bar-save: var(--fv-yellow-text);
+  --bar-fg: #fff;
+}
+
+.typeCLR.esl {
+  --bar: var(--fv-yellow);
+  --bar-edge: var(--fv-yellow-edge);
+  --bar-save: #000;
+  --bar-fg: #000;
+}
+
+.typeBMS {
+  --lbl: #000;
+  --lbl-accent: var(--fv-red);
+}
+
+.typeNEW {
+  --sw: #000;
+  --sw-streak: var(--fv-black-streak);
+  --sw-edge: transparent;
+  --lbl: #fff;
+  --lbl-accent: #fff;
+  --bar: #000;
+  --bar-edge: transparent;
+  --bar-save: #fff;
+  --bar-fg: #fff;
+}
+
+.typeVCD {
+}
+
+.typeMsgRed {
+  --sw: var(--fv-red);
+  --sw-streak: var(--fv-red-streak);
+  --sw-edge: transparent;
+  --mark: #fff;
+}
+
+.typeMsgYellow {
+  --mark: var(--fv-red);
+}
+
+.esl {
+}
+
+/* ---- ESL colour capability ---- */
+/* Black, white, red: yellow surfaces become white with a black edge, red stays. */
+.modeBWR {
+  --fv-yellow: #fff;
+  --fv-yellow-text: #fff;
+  --fv-yellow-streak: #fff;
+  --fv-yellow-edge: #000;
+}
+
+/* Black, white, grey only. */
+.modeBW {
+  --fv-red: #000;
+  --fv-yellow: #c8c8c8;
+  --fv-yellow-text: #fff;
+  --fv-yellow-streak: #e2e2e2;
+  --fv-red-streak: #6e6e6e;
+}
+
+/* ---- swoosh ---- */
+.swoosh {
+  position: absolute;
+  display: block;
+  overflow: visible;
+}
+
+.swooshFill {
+  fill: var(--sw);
+}
+
+.swooshStreak {
+  fill: var(--sw-streak);
+}
+
+.swooshEdge {
+  fill: none;
+  stroke: var(--sw-edge);
+  stroke-width: 2;
+}
+
+.label {
+  position: absolute;
+  z-index: 2;
+  color: var(--lbl);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.labelAccent {
+  color: var(--lbl-accent);
+}
+
+/* ---- layout helpers ---- */
+.column {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.priceWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+}
+
+.priceRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex: none;
+}
+
+.multibuy {
+  align-self: flex-start;
+  margin-left: 12%;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.priceRow .multibuy {
+  align-self: center;
+  margin-left: 0;
+}
+
+/* ---- price ---- */
+.price {
+  display: inline-flex;
+  align-items: flex-start;
+  font-weight: 800;
+  line-height: 0.8;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  color: inherit;
+}
+
+.pricePlaceholder {
+  color: #9ca3af;
+}
+
+.priceDollar {
+  font-size: 0.5em;
+  margin-top: 0.14em;
+  margin-right: 0.02em;
+}
+
+.priceDollars {
+  font-size: 1em;
+}
+
+.priceCentsCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  align-self: stretch;
+  margin-left: 0.02em;
+}
+
+.priceCents {
+  font-size: 0.5em;
+}
+
+.priceEa {
+  margin-top: auto;
+  font-size: 0.2em;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+/* ---- saving bar ---- */
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6em;
+  flex: none;
+  background: var(--bar);
+  box-shadow: inset 0 0 0 2px var(--bar-edge);
+  color: var(--bar-fg);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.barCentred {
+  justify-content: center;
+}
+
+.barStacked {
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.1em;
+}
+
+.barSave {
+  color: var(--bar-save);
+  font-weight: 800;
+}
+
+.barUnit {
+  font-weight: 500;
+}
+
+.barStacked .barUnit {
+  font-size: 0.85em;
+}
+
+/* ---- description ---- */
+.desc {
+  flex: none;
+  text-align: center;
+  font-weight: 600;
+  line-height: 1.12;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.descPlaceholder {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ---- footer ---- */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  border-top-style: solid;
+  border-top-color: #777;
+  line-height: 1;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.footerLimit {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.footerRight {
+  display: flex;
+  align-items: center;
+}
+
+.stripFooter {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6em;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.squareFooter {
+  position: absolute;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.squareFooterText {
+  font-weight: 500;
+}
+
+.barcode {
+  flex: none;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+/* ---- product photo placeholder ---- */
+.photo {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 55%, #f3f4f6 0%, #f3f4f6 45%, rgba(243, 244, 246, 0) 70%);
+}
+
+.photoSvg {
+  height: 88%;
+  width: 100%;
+}
+
+.photoBottle {
+  fill: #fff;
+  stroke: #c3c7ce;
+  stroke-width: 2;
+}
+
+.photoLabel {
+  fill: #e5e7eb;
+}
+
+.photoLetter {
+  fill: #9ca3af;
+  font-size: 26px;
+  font-weight: 800;
+  font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+}
+
+/* ---- FV mark / Villa Club Deal ---- */
+.fvMark {
+  display: block;
+  flex: none;
+  fill: var(--mark);
+}
+
+.vcdHeader {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fv-red);
+  color: #fff;
+  --mark: #fff;
+}
+
+.vcdBlock {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--fv-red);
+  color: #fff;
+  --mark: #fff;
+}
+
+.vcdHeaderText {
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.vcdBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  border-style: solid;
+  overflow: hidden;
+}
+
+.vcdMember {
+  background: var(--fv-red);
+  border-color: var(--fv-red);
+  color: #fff;
+}
+
+.vcdNonMember {
+  background: #fff;
+  border-color: #000;
+  color: #000;
+}
+
+.vcdBoxLabel {
+  font-weight: 800;
+  line-height: 0.95;
+  white-space: nowrap;
+}
+
+.vcdBoxPrice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vcdUnit {
+  margin-top: 0.4em;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.vcdSku {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.vcdSku span {
+  display: block;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+/* ---- message slots ---- */
+.messageMark {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.messageKind {
+  margin-top: 0.4em;
+  color: var(--mark);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.messageText {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+.messageHeadline {
+  font-weight: 800;
+  line-height: 1.02;
+  overflow-wrap: anywhere;
+}
+
+.messageBody {
+  color: #333;
+  font-weight: 500;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.messageEnd {
+  position: absolute;
+  color: #555;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.draft {
+  position: absolute;
+  z-index: 3;
+  color: #8a8f98;
+  border: 1px dashed #b8bcc4;
+  background: rgba(255, 255, 255, 0.85);
+  font-family: system-ui, sans-serif;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ---- empty ---- */
+.empty {
+  background: #f6f7f9;
+}
+
+.emptyBox {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  border-style: dashed;
+  border-color: #c4c8cf;
+  color: #8a8f98;
+  font-weight: 700;
+  text-align: center;
+}
+
+.emptyKind {
+  font-weight: 500;
+  color: #a3a8b0;
+}

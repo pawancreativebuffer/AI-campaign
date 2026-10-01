@@ -1,13 +1,18 @@
+import { getClientPack } from './clients';
 import { EXISTING_SCHEDULES } from './mockData';
-import { ESL_MAX_CHANGES_PER_DAY, UPLOADED_PRODUCT_SOURCE } from './options';
 import {
-  TEMPLATE_BY_ID,
+  ESL_MAX_CHANGES_PER_DAY,
+  MAX_SLOT_SECONDS,
+  MIN_SLOT_SECONDS,
+  UPLOADED_PRODUCT_SOURCE,
+} from './options';
+import {
   getAvailableDataTypes,
+  isProductSlot,
   getChangeTimes,
   getRequiredFormats,
   getSelectedDevices,
   getSelectedStores,
-  isTemplateCompatible,
   mediaIncludes,
   timeToMinutes,
 } from './helpers';
@@ -21,6 +26,16 @@ const ESL_LIMIT_MESSAGE = `ESL campaigns allow no more than ${ESL_MAX_CHANGES_PE
  * Set to true to enforce the per-step rules and block scheduling on failed checks again.
  */
 export const VALIDATION_ENABLED = true;
+
+/** A product slot needs a product and a design; any other slot needs a headline. */
+export function isSlotComplete(slot: CampaignDraft['slots'][number]): boolean {
+  return isProductSlot(slot.kind) ? !!slot.productSku && !!slot.ticketType : slot.headline.trim() !== '';
+}
+
+/** Slots that will actually be produced: message slots only run on Digital Signage. */
+function producedSlots(draft: CampaignDraft): CampaignDraft['slots'] {
+  return mediaIncludes(draft.media, 'signage') ? draft.slots : draft.slots.filter(slot => isProductSlot(slot.kind));
+}
 
 /** Errors that stop the user leaving a screen. Keys are field names the step renders against. */
 export function getStepErrors(step: number, draft: CampaignDraft): StepErrors {
@@ -100,7 +115,14 @@ export function getStepErrors(step: number, draft: CampaignDraft): StepErrors {
       } else if (sourceNeedsDetail(draft.brief.productSource) && !draft.brief.productSourceDetail) {
         errors.productSource = `Select the ${draft.brief.productSource.toLowerCase()} to consider`;
       }
-      if (draft.brief.contentRequired.length === 0) errors.contentRequired = 'Select at least one content type';
+      if (draft.slots.length === 0) errors.slots = 'Add at least one slot';
+      if (
+        !Number.isInteger(draft.slotSeconds) ||
+        draft.slotSeconds < MIN_SLOT_SECONDS ||
+        draft.slotSeconds > MAX_SLOT_SECONDS
+      ) {
+        errors.slotSeconds = `Each slot must run between ${MIN_SLOT_SECONDS} and ${MAX_SLOT_SECONDS} seconds`;
+      }
       if (!draft.prompt.trim()) {
         errors.prompt = 'Generate the AI prompt before continuing';
       } else if (draft.prompt !== buildCampaignPrompt(draft)) {
@@ -109,14 +131,28 @@ export function getStepErrors(step: number, draft: CampaignDraft): StepErrors {
       break;
     }
 
-    case 7:
-      if (!draft.products.some(p => p.approved)) errors.products = 'Approve at least one product';
+    case 7: {
+      // One approved product per product slot: fewer leaves slots empty, more means products that never play.
+      const productSlots = draft.slots.filter(slot => isProductSlot(slot.kind)).length;
+      const approved = draft.products.filter(p => p.approved).length;
+      if (approved < productSlots) {
+        const missing = productSlots - approved;
+        errors.products = `Approve ${missing} more product${missing === 1 ? '' : 's'}: your plan has ${productSlots} product slots`;
+      } else if (approved > productSlots) {
+        const extra = approved - productSlots;
+        errors.products = `${extra} approved product${extra === 1 ? '' : 's'} too many: your plan has ${productSlots} product slots. Add slots or unapprove products`;
+      }
       break;
+    }
 
     case 8: {
-      const missing = getRequiredFormats(draft).filter(f => !draft.templateSelections[f.key]);
-      if (missing.length > 0) {
-        errors.templates = `Select a template for every format (${missing.length} remaining)`;
+      const skus = draft.slots.map(slot => slot.productSku).filter(Boolean);
+      if (new Set(skus).size < skus.length) {
+        errors.duplicates = 'The same product is selected in more than one slot. Choose a different product for each slot';
+      }
+      const incomplete = producedSlots(draft).filter(slot => !isSlotComplete(slot));
+      if (incomplete.length > 0) {
+        errors.slots = `Complete every slot (${incomplete.length} remaining): product slots need a product and a ticket design, other slots need a headline`;
       }
       break;
     }
@@ -162,26 +198,30 @@ export function runScheduleValidation(draft: CampaignDraft): ValidationCheck[] {
     deviceCheck = { id: 'devices', label: 'Device availability', status: 'pass', detail: `All ${devices.length} selected devices are online.` };
   }
 
-  // 2. Template compatibility
+  // 2. Template compatibility: every slot has its design, and there are formats to render it for.
   const formats = getRequiredFormats(draft);
-  const badFormats = formats.filter(format => {
-    const template = TEMPLATE_BY_ID.get(draft.templateSelections[format.key] ?? '');
-    return !template || !isTemplateCompatible(template, format);
-  });
-  const templateCheck: ValidationCheck =
-    badFormats.length > 0
-      ? {
-          id: 'templates',
-          label: 'Template compatibility',
-          status: 'fail',
-          detail: `${badFormats.length} format(s) have no compatible template: ${badFormats.map(f => f.label).join(', ')}.`,
-        }
-      : {
-          id: 'templates',
-          label: 'Template compatibility',
-          status: formats.length === 0 ? 'fail' : 'pass',
-          detail: formats.length === 0 ? 'No content formats to check.' : `All ${formats.length} format(s) have a compatible template.`,
-        };
+  const incompleteSlots = producedSlots(draft).filter(slot => !isSlotComplete(slot));
+  let templateCheck: ValidationCheck;
+  if (formats.length === 0) {
+    templateCheck = { id: 'templates', label: 'Template compatibility', status: 'fail', detail: 'No content formats to check.' };
+  } else if (draft.slots.length === 0 || incompleteSlots.length > 0) {
+    templateCheck = {
+      id: 'templates',
+      label: 'Template compatibility',
+      status: 'fail',
+      detail:
+        draft.slots.length === 0
+          ? 'The campaign has no slots.'
+          : `${incompleteSlots.length} slot(s) have no product, ticket design or headline.`,
+    };
+  } else {
+    templateCheck = {
+      id: 'templates',
+      label: 'Template compatibility',
+      status: 'pass',
+      detail: `All ${draft.slots.length} slots have a design from the ${getClientPack(draft.clientId).name} template pack, rendered for ${formats.length} format(s).`,
+    };
+  }
 
   // 3. Scheduling conflicts: an ESL label can only show one campaign, signage can share a playlist.
   const conflicts = EXISTING_SCHEDULES.map(existing => {

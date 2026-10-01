@@ -253,6 +253,130 @@
   text-decoration: underline;
 }
 
+.slotControls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+}
+
+.secondsField,
+.presetField {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.secondsInput {
+  width: 120px;
+}
+
+.presetRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.presetActive,
+.presetActive:hover {
+  border-color: var(--primary-pink);
+  color: var(--primary-pink);
+}
+
+.slotList {
+  list-style: none;
+  margin: 16px 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.slotRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: white;
+}
+
+.slotNumber {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: #f3f4f6;
+  color: #2b2b36;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.slotSelect {
+  max-width: 260px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 14px;
+}
+
+.slotBadge {
+  flex-shrink: 0;
+}
+
+.slotActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.slotMove {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: white;
+  color: #4b5563;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slotMove:hover:not(:disabled) {
+  border-color: #d1d5db;
+  background-color: #f9fafb;
+}
+
+.slotMove:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.addSlot {
+  margin-top: 4px;
+}
+
+.slotSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.slotSummary strong {
+  color: #2b2b36;
+  font-weight: 600;
+}
+
 @media (max-width: 1100px) {
   .sourceCards {
     grid-template-columns: 1fr;

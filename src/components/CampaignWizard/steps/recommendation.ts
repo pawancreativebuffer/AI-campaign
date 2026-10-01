@@ -1,18 +1,11 @@
 import { PRODUCT_BRANDS, PRODUCT_CATALOG, PRODUCT_CATEGORIES, PRODUCT_SUPPLIERS } from '../mockData';
 import { UPLOADED_PRODUCT_SOURCE } from '../options';
-import { formatCurrency, formatTime12, getChangeTimes } from '../helpers';
+import { formatCurrency, formatTime12, getChangeTimes, getStoreRanging, isProductSlot } from '../helpers';
 import type { CampaignDraft, CampaignProduct, CatalogProduct } from '../types';
 
 const RECOMMENDATION_COUNT = 8;
 
-const CONTENT_PREFERENCE = [
-  'Product promotion',
-  'Category promotion',
-  'Brand advert',
-  'Loyalty message',
-  'Store-wide offer',
-  'Opening hours',
-];
+const CONTENT_PREFERENCE = ['Product promotion', 'Loyalty advert'];
 
 // Categories whose demand each external factor is assumed to move.
 const FACTOR_CATEGORIES: Record<string, string[]> = {
@@ -123,7 +116,7 @@ function relevantFactors(product: CatalogProduct, factors: string[]): string[] {
 
 function pickContentType(draft: CampaignDraft): string {
   const selected = draft.brief.contentRequired;
-  return CONTENT_PREFERENCE.find(type => selected.includes(type)) ?? selected[0] ?? 'Product promotion';
+  return CONTENT_PREFERENCE.find(type => selected.includes(type)) ?? 'Product promotion';
 }
 
 function candidateProducts(draft: CampaignDraft): CatalogProduct[] {
@@ -134,6 +127,8 @@ function candidateProducts(draft: CampaignDraft): CatalogProduct[] {
 
   return getCampaignCatalog(draft).filter(product => {
     if (uploaded && !uploaded.has(product.sku)) return false;
+    // Never recommend a product that none of the campaign's stores sell.
+    if (draft.storeIds.length > 0 && getStoreRanging(product.sku, draft).sold.length === 0) return false;
     if (productSource === 'Category' && product.category !== productSourceDetail) return false;
     if (productSource === 'Supplier' && product.supplier !== productSourceDetail) return false;
     if (productSource === 'Brand' && product.brand !== productSourceDetail) return false;
@@ -297,7 +292,7 @@ function buildReason(product: CatalogProduct, draft: CampaignDraft, supplier: st
 }
 
 function toCampaignProduct(product: CatalogProduct, draft: CampaignDraft, supplier: string): CampaignProduct {
-  const eligibleStores = Math.round(product.eligibleStorePct * draft.storeIds.length);
+  const eligibleStores = getStoreRanging(product.sku, draft).sold.length;
   return {
     sku: product.sku,
     description: product.description,
@@ -315,6 +310,12 @@ function toCampaignProduct(product: CatalogProduct, draft: CampaignDraft, suppli
     approved: false,
     source: 'ai',
   };
+}
+
+/** One recommendation per product slot, so approving them all fills the plan exactly. */
+function productSlotCount(draft: CampaignDraft): number {
+  const slots = draft.slots.filter(slot => isProductSlot(slot.kind)).length;
+  return slots > 0 ? slots : RECOMMENDATION_COUNT;
 }
 
 /**
@@ -338,7 +339,7 @@ export function recommendProducts(draft: CampaignDraft, excludeSkus: string[] = 
       return { product, score: objectiveScore(product, draft.objective, supplier) * boost };
     })
     .sort((a, b) => b.score - a.score || a.product.sku.localeCompare(b.product.sku))
-    .slice(0, uploadedList ? undefined : RECOMMENDATION_COUNT)
+    .slice(0, uploadedList ? undefined : productSlotCount(draft))
     .map(({ product }) => {
       const recommended = toCampaignProduct(product, draft, supplier);
       return uploadedList

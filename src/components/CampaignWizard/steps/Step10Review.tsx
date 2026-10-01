@@ -2,22 +2,27 @@ import React from 'react';
 import styles from '../wizard.module.css';
 import local from './Step10Review.module.css';
 import { STORES } from '../mockData';
+import { getClientPack, getDesignLabel } from '../clients';
 import {
-  TEMPLATE_BY_ID,
   formatCurrency,
   formatDateTime,
   formatTime12,
   getChangeTimes,
+  getLoopSeconds,
+  getPixelSize,
   getRequiredFormats,
   getSelectedDevices,
   getSelectedStores,
+  isProductSlot,
   mediaLabel,
   unique,
 } from '../helpers';
 import { runScheduleValidation } from '../validation';
 import { AlertIcon, CheckIcon, EditIcon } from '../icons';
 import { describeDataSources } from './promptBuilder';
-import type { DeviceStatus, StepProps } from '../types';
+import TicketPreview from './TicketPreview';
+import { getSlotOutputs, getTicketContent } from './ticketContent';
+import type { CampaignDraft, CampaignSlot, ContentFormat, DeviceStatus, StepProps } from '../types';
 
 const STATUS_BADGE: Record<DeviceStatus, string> = {
   Online: styles.badgeGreen,
@@ -32,6 +37,28 @@ function countBy(values: string[]): [string, number][] {
 }
 
 const listOrDash = (values: string[]) => (values.length > 0 ? values.join(', ') : '-');
+
+const THUMB_WIDTH = 96;
+const THUMB_HEIGHT = 64;
+
+/** Small ticket preview: the slot in the first signage format, or (product slots only) the first ESL format. */
+const SlotThumb = ({ slot, draft, formats }: { slot: CampaignSlot; draft: CampaignDraft; formats: ContentFormat[] }) => {
+  const format = formats.find(f => f.media === 'signage') ?? (isProductSlot(slot.kind) ? formats[0] : undefined);
+  if (!format) return <span className={local.productMeta}>Not shown on ESL</span>;
+  const { width, height } = getPixelSize(format);
+  return (
+    <div className={local.thumb}>
+      <TicketPreview
+        clientId={draft.clientId}
+        content={getTicketContent(slot, draft)}
+        width={width}
+        height={height}
+        displayWidth={Math.max(1, Math.min(THUMB_WIDTH, Math.round((THUMB_HEIGHT * width) / height)))}
+        eslColour={format.media === 'esl' ? format.eslColour : undefined}
+      />
+    </div>
+  );
+};
 
 interface SectionProps {
   title: string;
@@ -90,8 +117,11 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
 
   const signageFormats = formats.filter(f => f.media === 'signage');
   const eslFormats = formats.filter(f => f.media === 'esl');
-  const signageOutputs = approved.length * signageFormats.length;
-  const eslOutputs = approved.length * eslFormats.length;
+  const outputs = getSlotOutputs(draft);
+  const signageOutputs = outputs.filter(o => o.format.media === 'signage').length;
+  const eslOutputs = outputs.length - signageOutputs;
+  const productSlotCount = draft.slots.filter(slot => isProductSlot(slot.kind)).length;
+  const slotPlan = `${draft.slots.length} slot(s) x ${draft.slotSeconds} sec = ${getLoopSeconds(draft)} sec loop`;
 
   const { brief } = draft;
   const productSource = [brief.productSource, brief.productSourceDetail].filter(Boolean).join(': ');
@@ -134,6 +164,7 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
           <Info label="Campaign name">{draft.name || '-'}</Info>
           <Info label="Objective">{draft.objective || '-'}</Info>
           <Info label="Owner">{draft.owner || '-'}</Info>
+          <Info label="Client template pack">{getClientPack(draft.clientId).name}</Info>
           <Info label="Status">
             <span className={`${styles.badge} ${draft.status === 'Scheduled' ? styles.badgeGreen : styles.badgeAmber}`}>
               {draft.status}
@@ -216,6 +247,7 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
           <Info label="Products to consider">{productSource || '-'}</Info>
           <Info label="External factors">{listOrDash(brief.externalFactors)}</Info>
           <Info label="Content required">{listOrDash(brief.contentRequired)}</Info>
+          <Info label="Slot plan">{slotPlan}</Info>
           <Info label="Additional rules">
             {brief.additionalRules.length > 0
               ? brief.additionalRules.map((rule, i) => <div key={i}>{rule}</div>)
@@ -247,7 +279,6 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
                   <th className={styles.numeric}>Promo price</th>
                   <th className={styles.numeric}>Saving</th>
                   <th className={styles.numeric}>Margin</th>
-                  <th>Content type</th>
                 </tr>
               </thead>
               <tbody>
@@ -269,7 +300,6 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
                         {formatCurrency(saving)} ({savingPct}%)
                       </td>
                       <td className={styles.numeric}>{product.marginPct}%</td>
-                      <td>{product.contentType}</td>
                     </tr>
                   );
                 })}
@@ -279,44 +309,46 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
         )}
       </Section>
 
-      <Section title="Templates" step={8} meta={`${formats.length} format(s)`} onEdit={goToStep}>
-        {formats.length === 0 ? (
-          <div className={styles.emptyState}>No content formats - select devices first.</div>
+      <Section title="Slots" step={8} meta={slotPlan} onEdit={goToStep}>
+        {draft.slots.length === 0 ? (
+          <div className={styles.emptyState}>The campaign has no slots.</div>
         ) : (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Media</th>
-                  <th>Format</th>
-                  <th className={styles.numeric}>Devices</th>
-                  <th>Template</th>
-                  <th>Type</th>
+                  <th className={styles.numeric}>Slot</th>
+                  <th>Kind</th>
+                  <th>Product or headline</th>
+                  <th>Design</th>
+                  <th>Preview</th>
                 </tr>
               </thead>
               <tbody>
-                {formats.map(format => {
-                  const template = TEMPLATE_BY_ID.get(draft.templateSelections[format.key] ?? '');
+                {draft.slots.map((slot, i) => {
+                  const content = getTicketContent(slot, draft);
+                  const title = content.product
+                    ? `${content.product.description} ${content.product.size}`
+                    : content.headline;
+                  const design = isProductSlot(slot.kind)
+                    ? slot.ticketType && getDesignLabel(draft.clientId, slot.ticketType)
+                    : 'Draft design';
                   return (
-                    <tr key={format.key}>
-                      <td>{mediaLabel(format.media)}</td>
-                      <td>{format.label}</td>
-                      <td className={styles.numeric}>{format.deviceCount}</td>
+                    <tr key={slot.id}>
+                      <td className={styles.numeric}>{i + 1}</td>
+                      <td>{slot.kind}</td>
                       <td>
-                        {template ? (
-                          template.name
+                        {title ? (
+                          <span className={local.productName}>{title}</span>
                         ) : (
-                          <span className={`${styles.badge} ${styles.badgeRed}`}>Not selected</span>
+                          <span className={`${styles.badge} ${styles.badgeRed}`}>Not set</span>
                         )}
                       </td>
                       <td>
-                        {template && (
-                          <span
-                            className={`${styles.badge} ${template.kind === 'Animated' ? styles.badgePink : styles.badgeBlue}`}
-                          >
-                            {template.kind}
-                          </span>
-                        )}
+                        {design || <span className={`${styles.badge} ${styles.badgeRed}`}>Not selected</span>}
+                      </td>
+                      <td>
+                        <SlotThumb slot={slot} draft={draft} formats={formats} />
                       </td>
                     </tr>
                   );
@@ -340,8 +372,9 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
           <Stat label={draft.contentGenerated ? 'Total generated outputs' : 'Total outputs required'} value={signageOutputs + eslOutputs} />
         </div>
         <p className={local.note}>
-          {approved.length} approved product(s) x {formats.length} format(s): one output per product for each media
-          format or size.
+          Each Digital Signage format ({signageFormats.length}) gets all {draft.slots.length} slot(s), played as a
+          loop. Each ESL format ({eslFormats.length}) gets only the {productSlotCount} product slot(s), because a label
+          shows one product.
         </p>
       </Section>
     </div>

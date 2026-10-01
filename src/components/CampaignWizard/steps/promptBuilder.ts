@@ -1,3 +1,4 @@
+import { getClientPack } from '../clients';
 import { REGIONS, STORES, STORE_FORMATS } from '../mockData';
 import { DATA_SOURCES, ESL_MAX_CHANGES_PER_DAY, UPLOADED_PRODUCT_SOURCE } from '../options';
 import {
@@ -95,6 +96,7 @@ export function buildCampaignPrompt(draft: CampaignDraft): string {
   );
 
   section('CAMPAIGN');
+  lines.push(`- Client: ${getClientPack(draft.clientId).name}`);
   lines.push(`- Name: ${draft.name.trim() || 'Untitled campaign'}`);
   lines.push(`- Objective: ${draft.objective || 'Not specified'}`);
   if (draft.description.trim()) lines.push(`- Description: ${draft.description.trim()}`);
@@ -131,6 +133,15 @@ export function buildCampaignPrompt(draft: CampaignDraft): string {
       `  - ${format.media === 'signage' ? 'Digital Signage' : 'ESL'} ${format.label} (${plural(format.deviceCount, 'device')})`,
     );
   }
+
+  section('CAMPAIGN STRUCTURE');
+  lines.push(
+    `- ${plural(draft.slots.length, 'slot')}, ${draft.slotSeconds} seconds each on Digital Signage (${draft.slots.length * draft.slotSeconds}-second loop)`,
+  );
+  draft.slots.forEach((slot, i) => lines.push(`  - Slot ${i + 1}: ${slot.kind}`));
+  lines.push(
+    `- Fill every product slot with a recommended product. Designs come only from the approved ${getClientPack(draft.clientId).name} ticket templates.`,
+  );
 
   section('CONSTRAINTS');
   lines.push('- Only schedule content changes within store opening hours.');

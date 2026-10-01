@@ -76,3 +76,12 @@
 .statGridFlush {
   margin-bottom: 0;
 }
+
+.thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 64px;
+  overflow: hidden;
+}

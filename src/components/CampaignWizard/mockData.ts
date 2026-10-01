@@ -1,4 +1,4 @@
-import type { CatalogProduct, Device, DeviceStatus, ExistingSchedule, Store, Template } from './types';
+import type { CatalogProduct, Device, DeviceStatus, ExistingSchedule, Store } from './types';
 
 // Mock retail network. Everything is generated from the index so server and client render the same data.
 
@@ -59,9 +59,10 @@ export const SIGNAGE_LOCATIONS = ['Entrance', 'Aisle End', 'Checkout', 'Window',
 export const ESL_LOCATIONS = ['Aisles 1-4', 'Aisles 5-8', 'Chiller', 'Produce', 'Liquor', 'Front End'];
 export const SIGNAGE_TAGS = ['Promo', 'Large', 'Small', 'Window Facing', 'Interactive'];
 export const ESL_TAGS = ['Shelf Edge', 'Promo', 'Fresh', 'Premium'];
-export const LANDSCAPE_RESOLUTIONS = ['1920x1080', '3840x2160', '1920x540'];
+// Device sizes. They match the sizes in the Food Villa template set; other clients' packs may cover other sizes.
+export const LANDSCAPE_RESOLUTIONS = ['1920x1080', '1280x720'];
 export const PORTRAIT_RESOLUTIONS = ['1080x1920', '2160x3840'];
-export const ESL_SIZES = ['1.54"', '2.13"', '2.9"', '4.2"', '7.5"'];
+export const ESL_SIZES = ['200x200', '250x122', '296x152', '300x400', '528x880', '640x960'];
 export const ESL_COLOURS = ['BW', 'BWR', 'BWRY'];
 export const ESL_COLOUR_LABELS: Record<string, string> = {
   BW: 'Black / White',
@@ -150,23 +151,6 @@ export const PRODUCT_CATALOG: CatalogProduct[] = [
 export const PRODUCT_CATEGORIES = Array.from(new Set(PRODUCT_CATALOG.map(p => p.category)));
 export const PRODUCT_SUPPLIERS = Array.from(new Set(PRODUCT_CATALOG.map(p => p.supplier)));
 export const PRODUCT_BRANDS = Array.from(new Set(PRODUCT_CATALOG.map(p => p.brand)));
-
-// Approved templates. Digital Signage may be static or animated; ESL templates are always static.
-export const TEMPLATES: Template[] = [
-  { id: 'DS-01', name: 'Price Hero Landscape', media: 'signage', kind: 'Static', orientation: 'Landscape', resolutions: ['1920x1080', '3840x2160'], eslSizes: [], eslColours: [], contentTypes: ['Product promotion', 'Store-wide offer'], accent: '#eb2771', layout: 'price-hero' },
-  { id: 'DS-02', name: 'Animated Price Reveal', media: 'signage', kind: 'Animated', orientation: 'Landscape', resolutions: ['1920x1080', '3840x2160'], eslSizes: [], eslColours: [], contentTypes: ['Product promotion', 'Category promotion'], accent: '#ffd800', layout: 'product-split' },
-  { id: 'DS-03', name: 'Price Hero Portrait', media: 'signage', kind: 'Static', orientation: 'Portrait', resolutions: ['1080x1920', '2160x3840'], eslSizes: [], eslColours: [], contentTypes: ['Product promotion', 'Store-wide offer'], accent: '#eb2771', layout: 'price-hero' },
-  { id: 'DS-04', name: 'Animated Portrait Spotlight', media: 'signage', kind: 'Animated', orientation: 'Portrait', resolutions: ['1080x1920', '2160x3840'], eslSizes: [], eslColours: [], contentTypes: ['Product promotion', 'Brand advert'], accent: '#2b2b36', layout: 'product-split' },
-  { id: 'DS-05', name: 'Category Banner Stretch', media: 'signage', kind: 'Static', orientation: 'Landscape', resolutions: ['1920x540'], eslSizes: [], eslColours: [], contentTypes: ['Category promotion', 'Store-wide offer'], accent: '#5CB85C', layout: 'banner' },
-  { id: 'DS-06', name: 'Animated Ticker Stretch', media: 'signage', kind: 'Animated', orientation: 'Landscape', resolutions: ['1920x540'], eslSizes: [], eslColours: [], contentTypes: ['Product promotion', 'Opening hours'], accent: '#ffd800', layout: 'banner' },
-  { id: 'DS-07', name: 'Brand Story', media: 'signage', kind: 'Animated', orientation: 'Any', resolutions: [], eslSizes: [], eslColours: [], contentTypes: ['Brand advert'], accent: '#1f2937', layout: 'message' },
-  { id: 'DS-08', name: 'Store Message', media: 'signage', kind: 'Static', orientation: 'Any', resolutions: [], eslSizes: [], eslColours: [], contentTypes: ['Loyalty message', 'Store-wide offer', 'Opening hours'], accent: '#0070f3', layout: 'message' },
-  { id: 'ESL-01', name: 'Shelf Price Compact', media: 'esl', kind: 'Static', orientation: 'Landscape', resolutions: [], eslSizes: ['1.54"', '2.13"'], eslColours: [], contentTypes: ['Product promotion'], accent: '#111111', layout: 'shelf-label' },
-  { id: 'ESL-02', name: 'Shelf Promo Red', media: 'esl', kind: 'Static', orientation: 'Landscape', resolutions: [], eslSizes: ['2.13"', '2.9"'], eslColours: ['BWR', 'BWRY'], contentTypes: ['Product promotion'], accent: '#cc0000', layout: 'shelf-label' },
-  { id: 'ESL-03', name: 'Shelf Promo Standard', media: 'esl', kind: 'Static', orientation: 'Landscape', resolutions: [], eslSizes: ['2.9"', '4.2"'], eslColours: [], contentTypes: ['Product promotion', 'Loyalty message'], accent: '#111111', layout: 'shelf-label' },
-  { id: 'ESL-04', name: 'Shelf Feature Large', media: 'esl', kind: 'Static', orientation: 'Landscape', resolutions: [], eslSizes: ['4.2"', '7.5"'], eslColours: [], contentTypes: ['Product promotion', 'Category promotion'], accent: '#111111', layout: 'shelf-label' },
-  { id: 'ESL-05', name: 'Shelf Feature Special Price', media: 'esl', kind: 'Static', orientation: 'Landscape', resolutions: [], eslSizes: ['4.2"', '7.5"'], eslColours: ['BWRY'], contentTypes: ['Product promotion', 'Store-wide offer'], accent: '#ffd800', layout: 'shelf-label' },
-];
 
 // Campaigns already scheduled on the network, used for the scheduling-conflict check.
 export const EXISTING_SCHEDULES: ExistingSchedule[] = [

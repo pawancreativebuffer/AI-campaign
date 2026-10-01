@@ -48,6 +48,9 @@ const CampaignWizard: React.FC = () => {
   const isScheduled = draft.status === 'Scheduled';
   const errors = useMemo(() => getStepErrors(step, draft), [step, draft]);
   const firstError = Object.values(errors)[0];
+  // These problems are shown in red on the step itself, so Next stays disabled until they are fixed:
+  // step 7 when products and product slots do not match, step 8 when one product is in two slots.
+  const blockNext = (step === 7 && !!firstError) || (step === 8 && !!errors.duplicates);
 
   const update = useCallback((patch: Partial<CampaignDraft>) => {
     setDraft(prev => applyDraftPatch(prev, patch));
@@ -207,7 +210,12 @@ const CampaignWizard: React.FC = () => {
                     <div className={styles.btnText}>Create and Schedule Campaign</div>
                   </button>
                 ) : (
-                  <button className={`${styles.btnWithIcon} ${styles.btnGreen}`} onClick={handleNext}>
+                  <button
+                    className={`${styles.btnWithIcon} ${styles.btnGreen}`}
+                    onClick={handleNext}
+                    disabled={blockNext}
+                    title={blockNext ? firstError : undefined}
+                  >
                     <div className={styles.btnIcon}>
                       <ArrowRightIcon />
                     </div>

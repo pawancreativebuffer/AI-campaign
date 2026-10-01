@@ -3,7 +3,9 @@ import styles from '../wizard.module.css';
 import local from './Step11Schedule.module.css';
 import { STORES } from '../mockData';
 import { WIZARD_STEPS } from '../options';
-import { formatDateTime, getRequiredFormats, getSelectedDevices, getSelectedStores } from '../helpers';
+import { formatDateTime, getLoopSeconds, getSelectedDevices, getSelectedStores } from '../helpers';
+import { getSlotOutputs } from './ticketContent';
+import { getClientPack } from '../clients';
 import { runScheduleValidation } from '../validation';
 import { AlertIcon, ArrowRightIcon, CheckIcon, CloseIcon } from '../icons';
 import type { StepProps, ValidationCheck } from '../types';
@@ -38,17 +40,18 @@ const Info = ({ label, children }: { label: string; children: React.ReactNode })
 const Step11Schedule: React.FC<StepProps> = ({ draft, goToStep }) => {
   const stores = getSelectedStores(draft);
   const devices = getSelectedDevices(draft);
-  const formats = getRequiredFormats(draft);
+  const outputs = getSlotOutputs(draft);
+  const signageOutputs = outputs.filter(o => o.format.media === 'signage').length;
   const approvedCount = draft.products.filter(p => p.approved).length;
   const signageCount = devices.filter(d => d.media === 'signage').length;
   const eslCount = devices.length - signageCount;
-  const outputs = approvedCount * formats.length;
 
   const start = formatDateTime(draft.startDate, draft.startTime) || '-';
   const finish = formatDateTime(draft.endDate, draft.endTime) || '-';
   const storesText = `${stores.length} of ${STORES.length}`;
   const devicesText = `${devices.length} (${signageCount} Digital Signage, ${eslCount} ESL)`;
-  const outputsText = `${outputs} (${approvedCount} product(s) x ${formats.length} format(s))`;
+  const slotsText = `${draft.slots.length} x ${draft.slotSeconds} sec (${getLoopSeconds(draft)} sec loop)`;
+  const outputsText = `${outputs.length} (${signageOutputs} Digital Signage, ${outputs.length - signageOutputs} ESL)`;
 
   if (draft.status === 'Scheduled') {
     return (
@@ -76,8 +79,10 @@ const Step11Schedule: React.FC<StepProps> = ({ draft, goToStep }) => {
               <Info label="Schedule window">
                 {start} to {finish}
               </Info>
+              <Info label="Client">{getClientPack(draft.clientId).name}</Info>
               <Info label="Stores">{storesText}</Info>
               <Info label="Devices">{devicesText}</Info>
+              <Info label="Slots">{slotsText}</Info>
               <Info label="Content outputs">{outputsText}</Info>
             </div>
           </div>
@@ -107,8 +112,10 @@ const Step11Schedule: React.FC<StepProps> = ({ draft, goToStep }) => {
             <Info label="Campaign name">{draft.name || '-'}</Info>
             <Info label="Start">{start}</Info>
             <Info label="Finish">{finish}</Info>
+            <Info label="Client">{getClientPack(draft.clientId).name}</Info>
             <Info label="Stores">{storesText}</Info>
             <Info label="Devices">{devicesText}</Info>
+            <Info label="Slots">{slotsText}</Info>
             <Info label="Approved products">{approvedCount}</Info>
             <Info label="Content outputs">{outputsText}</Info>
           </div>
