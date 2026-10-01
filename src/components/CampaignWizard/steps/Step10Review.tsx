@@ -7,10 +7,11 @@ import {
   formatCurrency,
   formatDateTime,
   formatTime12,
-  getChangeTimes,
+  getStoreHoursRange,
   getLoopSeconds,
   getPixelSize,
   getRequiredFormats,
+  getCampaignShelfLabels,
   getSelectedDevices,
   getSelectedStores,
   isProductSlot,
@@ -106,14 +107,12 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
   const devices = getSelectedDevices(draft);
   const formats = getRequiredFormats(draft);
   const approved = draft.products.filter(p => p.approved);
-  const changeTimes = getChangeTimes(draft);
+  const hours = getStoreHoursRange(draft);
   const issues = runScheduleValidation(draft).filter(check => check.status !== 'pass');
 
-  const signageDevices = devices.filter(d => d.media === 'signage');
-  const eslDevices = devices.filter(d => d.media === 'esl');
-  const eslLabels = eslDevices.reduce((sum, d) => sum + d.labelCount, 0);
-  const storesCovered = unique(devices.map(d => d.storeId)).length;
-  const statusCounts = countBy(devices.map(d => d.status)) as [DeviceStatus, number][];
+  const shelfLabels = getCampaignShelfLabels(draft);
+  const storesCovered = unique([...devices.map(d => d.storeId), ...shelfLabels.map(l => l.storeId)]).length;
+  const statusCounts = countBy([...devices.map(d => d.status), ...shelfLabels.map(l => l.status)]) as [DeviceStatus, number][];
 
   const signageFormats = formats.filter(f => f.media === 'signage');
   const eslFormats = formats.filter(f => f.media === 'esl');
@@ -180,10 +179,9 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
           <Info label="Finish">{formatDateTime(draft.endDate, draft.endTime) || '-'}</Info>
           <Info label="Active days">{listOrDash(draft.activeDays)}</Info>
           <Info label="Store opening hours">
-            {formatTime12(draft.openingTime)} - {formatTime12(draft.closingTime)}
+            {hours ? `Each store's own (${formatTime12(hours.open)} - ${formatTime12(hours.close)})` : "Each store's own"}
           </Info>
-          <Info label="Content changes per day">{draft.changesPerDay}</Info>
-          <Info label="Change times">{listOrDash(changeTimes.map(formatTime12))}</Info>
+          <Info label="Content changes per day">{draft.changesPerDay}, spread across each store&apos;s hours</Info>
         </div>
       </Section>
 
@@ -222,16 +220,15 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
         </p>
       </Section>
 
-      <Section title="Devices" step={5} meta={`${devices.length} selected`} onEdit={goToStep}>
+      <Section title="Devices" step={5} meta={`${devices.length} screens, ${shelfLabels.length} shelf labels`} onEdit={goToStep}>
         <div className={styles.statGrid}>
-          <Stat label="Digital Signage devices" value={signageDevices.length} />
-          <Stat label="ESL devices" value={eslDevices.length} />
-          <Stat label="ESL labels" value={eslLabels.toLocaleString('en-US')} />
+          <Stat label="Digital Signage screens" value={devices.length} />
+          <Stat label="ESL shelf labels (automatic)" value={shelfLabels.length} />
           <Stat label="Stores covered" value={`${storesCovered} of ${stores.length}`} />
         </div>
         <div className={local.subLabel}>Device status</div>
         <div className={local.badgeList}>
-          {statusCounts.length === 0 && <span className={styles.badge}>No devices selected</span>}
+          {statusCounts.length === 0 && <span className={styles.badge}>No screens or shelf labels</span>}
           {statusCounts.map(([status, count]) => (
             <span key={status} className={`${styles.badge} ${STATUS_BADGE[status]}`}>
               {status}: {count}

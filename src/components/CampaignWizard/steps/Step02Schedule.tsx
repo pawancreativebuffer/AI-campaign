@@ -2,7 +2,7 @@ import React from 'react';
 import styles from '../wizard.module.css';
 import local from './Step02Schedule.module.css';
 import { DAYS, ESL_MAX_CHANGES_PER_DAY } from '../options';
-import { formatTime12, getChangeTimes, mediaIncludes, toggleValue } from '../helpers';
+import { formatTime12, getChangeTimes, getStoreHoursRange, mediaIncludes, toggleValue } from '../helpers';
 import { AlertIcon } from '../icons';
 import type { StepProps } from '../types';
 
@@ -26,7 +26,11 @@ const Step02Schedule: React.FC<StepProps> = ({ draft, update, errors, showErrors
     update({ activeDays: DAYS.filter(d => next.includes(d)) });
   };
 
-  const changeTimes = getChangeTimes(draft);
+  // Stores keep their own opening hours; the example shows how changes spread across a typical day.
+  const EXAMPLE_OPEN = '08:00';
+  const EXAMPLE_CLOSE = '21:00';
+  const changeTimes = getChangeTimes(draft.changesPerDay, EXAMPLE_OPEN, EXAMPLE_CLOSE);
+  const hours = getStoreHoursRange(draft);
   const hasEsl = mediaIncludes(draft.media, 'esl');
   const overEslLimit = draft.changesPerDay > ESL_MAX_CHANGES_PER_DAY;
   const eslNoteClass = !overEslLimit ? '' : hasEsl ? styles.alertError : styles.alertWarning;
@@ -139,34 +143,9 @@ const Step02Schedule: React.FC<StepProps> = ({ draft, update, errors, showErrors
       </div>
 
       <div className={styles.panel}>
-        <div className={styles.panelHeader}>Store Opening Hours and Content Changes</div>
+        <div className={styles.panelHeader}>Content Changes</div>
         <div className={styles.panelBody}>
           <div className={styles.formRow}>
-            <div className={styles.formGroup}>
-              <label className={styles.label} htmlFor="schedule-opening-time">
-                Store opening time <span className={styles.required}>*</span>
-              </label>
-              <input
-                id="schedule-opening-time"
-                type="time"
-                className={inputClass('openingHours')}
-                value={draft.openingTime}
-                onChange={e => update({ openingTime: e.target.value })}
-              />
-              {errorFor('openingHours') && <span className={styles.errorText}>{errorFor('openingHours')}</span>}
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label} htmlFor="schedule-closing-time">
-                Store closing time <span className={styles.required}>*</span>
-              </label>
-              <input
-                id="schedule-closing-time"
-                type="time"
-                className={inputClass('openingHours')}
-                value={draft.closingTime}
-                onChange={e => update({ closingTime: e.target.value })}
-              />
-            </div>
             <div className={styles.formGroup}>
               <label className={styles.label} htmlFor="schedule-changes">
                 Content changes per day <span className={styles.required}>*</span>
@@ -192,7 +171,7 @@ const Step02Schedule: React.FC<StepProps> = ({ draft, update, errors, showErrors
           </div>
 
           <div className={local.changeTimes}>
-            <div className={local.changeTimesTitle}>Content-change times</div>
+            <div className={local.changeTimesTitle}>When content changes</div>
             {changeTimes.length > 0 ? (
               <>
                 <div className={local.changeTimesList}>
@@ -206,13 +185,16 @@ const Step02Schedule: React.FC<StepProps> = ({ draft, update, errors, showErrors
                   )}
                 </div>
                 <div className={styles.helpText}>
-                  {changeTimes.length === 1 ? 'The change is' : `The ${changeTimes.length} changes are`} spread evenly
-                  within store opening hours ({formatTime12(draft.openingTime)} - {formatTime12(draft.closingTime)}).
+                  Example for a store open {formatTime12(EXAMPLE_OPEN)} - {formatTime12(EXAMPLE_CLOSE)}. Every store uses its own
+                  opening hours from the store data: the first change is when the store opens and the rest are spread evenly
+                  until it closes.
+                  {hours &&
+                    ` Your selected stores open between ${formatTime12(hours.open)} and ${formatTime12(hours.close)}.`}
                 </div>
               </>
             ) : (
               <div className={styles.helpText}>
-                Enter valid opening hours and at least one content change per day to see the change times.
+                Enter at least one content change per day to see when content changes.
               </div>
             )}
           </div>

@@ -6,7 +6,7 @@ import { getSlotOutputs, getTicketContent } from './ticketContent';
 import type { SlotOutput } from './ticketContent';
 import { ESL_COLOUR_LABELS } from '../mockData';
 import { getClientPack, getDesignLabel } from '../clients';
-import { getLoopSeconds, getPixelSize, getRequiredFormats, isProductSlot, mediaLabel, unique } from '../helpers';
+import { getLoopSeconds, getPixelSize, getProductShelfLabels, getRequiredFormats, isProductSlot, mediaLabel, unique } from '../helpers';
 import { isSlotComplete } from '../validation';
 import { AlertIcon, ArrowLeftIcon, ArrowRightIcon, CheckIcon, RefreshIcon, SparkleIcon } from '../icons';
 import type { CampaignDraft, CampaignSlot, ContentFormat, DeviceMedia, StepProps } from '../types';
@@ -147,7 +147,9 @@ const SignagePlayer = ({ draft, formats }: PlayerProps) => {
         </div>
 
         <div className={css.playerStage}>
-          <Ticket slot={slot} format={format} draft={draft} maxWidth={560} maxHeight={420} />
+          <div key={slot.id}>
+            <Ticket slot={slot} format={format} draft={draft} maxWidth={560} maxHeight={420} />
+          </div>
         </div>
 
         <div className={css.playerInfo}>
@@ -257,10 +259,11 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
   }
 
   const allOutputs = getSlotOutputs(draft);
+  const eslLabelCount = (sku: string, formatKey: string) =>
+    getProductShelfLabels(draft, sku).filter(l => `esl|${l.size}|${l.colour}` === formatKey).length;
   const total = allOutputs.length;
   const clientName = getClientPack(draft.clientId).name;
   const signageFormats = formats.filter(f => f.media === 'signage');
-  const productSlotCount = draft.slots.filter(slot => isProductSlot(slot.kind)).length;
 
   const generate = () => {
     if (timer.current) clearInterval(timer.current);
@@ -325,8 +328,8 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
         <p className={styles.sectionIntro}>
           Content is generated for every slot in every required format, using the {clientName} design chosen for
           each slot. Digital Signage screens play all {plural(draft.slots.length, 'slot')} in turn ({draft.slotSeconds}{' '}
-          sec each). An ESL label shows one product, so ESL formats only get the{' '}
-          {plural(productSlotCount, 'product slot')}.
+          sec each). An ESL shelf label sits under one product, so each product gets one ESL ticket per size of its own
+          labels, sent only to those labels.
         </p>
 
         {summary}
@@ -349,20 +352,20 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
                 <tr>
                   <th>Media</th>
                   <th>Format / size</th>
-                  <th className={styles.numeric}>Devices</th>
+                  <th className={styles.numeric}>Screens / labels</th>
                   <th>Slots included</th>
                   <th className={styles.numeric}>Outputs</th>
                 </tr>
               </thead>
               <tbody>
                 {formats.map(format => {
-                  const count = format.media === 'signage' ? draft.slots.length : productSlotCount;
+                  const count = allOutputs.filter(o => o.format.key === format.key).length;
                   return (
                     <tr key={format.key}>
                       <td>{mediaLabel(format.media)}</td>
                       <td>{format.label}</td>
                       <td className={styles.numeric}>{format.deviceCount}</td>
-                      <td>{format.media === 'signage' ? 'All slots, as a loop' : 'Product slots only'}</td>
+                      <td>{format.media === 'signage' ? 'All slots, as a loop' : 'Each product on its own shelf labels'}</td>
                       <td className={styles.numeric}>{count}</td>
                     </tr>
                   );
@@ -532,8 +535,8 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
                       <dd>{designName(slot, draft.clientId)}</dd>
                       <dt>Format / size</dt>
                       <dd>{format.label}</dd>
-                      <dt>Devices</dt>
-                      <dd>{format.deviceCount}</dd>
+                      <dt>{format.media === 'esl' ? 'Labels' : 'Screens'}</dt>
+                      <dd>{format.media === 'esl' ? eslLabelCount(slot.productSku, format.key) : format.deviceCount}</dd>
                     </dl>
                   </div>
                 </article>

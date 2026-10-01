@@ -4,7 +4,7 @@ import { DATA_SOURCES, ESL_MAX_CHANGES_PER_DAY, UPLOADED_PRODUCT_SOURCE } from '
 import {
   formatDateTime,
   formatTime12,
-  getChangeTimes,
+  getStoreHoursRange,
   getRequiredFormats,
   getSelectedDevices,
   getSelectedStores,
@@ -72,8 +72,9 @@ export function buildCampaignPrompt(draft: CampaignDraft): string {
   const { brief } = draft;
   const stores = getSelectedStores(draft);
   const devices = getSelectedDevices(draft);
-  const formats = getRequiredFormats(draft);
-  const changeTimes = getChangeTimes(draft);
+  // Screen sizes only: ESL label sizes depend on the products, which are chosen after the prompt.
+  const formats = getRequiredFormats(draft).filter(format => format.media === 'signage');
+  const hours = getStoreHoursRange(draft);
   const rules = cleanRules(brief.additionalRules);
 
   const regions = REGIONS.filter(region => stores.some(s => s.region === region));
@@ -81,9 +82,7 @@ export function buildCampaignPrompt(draft: CampaignDraft): string {
   const otherFormats = unique(stores.map(s => s.format)).filter(f => !STORE_FORMATS.includes(f));
 
   const signage = devices.filter(d => d.media === 'signage');
-  const esl = devices.filter(d => d.media === 'esl');
-  const eslLabels = esl.reduce((sum, d) => sum + d.labelCount, 0);
-  const hasEsl = esl.length > 0 || draft.media === 'esl' || draft.media === 'both';
+  const hasEsl = draft.media === 'esl' || draft.media === 'both';
 
   const lines: string[] = [];
   const section = (title: string) => {
@@ -105,12 +104,10 @@ export function buildCampaignPrompt(draft: CampaignDraft): string {
   lines.push(`- Starts: ${formatDateTime(draft.startDate, draft.startTime) || 'Not set'}`);
   lines.push(`- Finishes: ${formatDateTime(draft.endDate, draft.endTime) || 'Not set'}`);
   lines.push(`- Active days: ${listOrNone(draft.activeDays)}`);
-  lines.push(`- Store opening hours: ${formatTime12(draft.openingTime) || '-'} to ${formatTime12(draft.closingTime) || '-'}`);
   lines.push(
-    `- Content changes per day: ${draft.changesPerDay}${
-      changeTimes.length > 0 ? ` (at ${changeTimes.map(formatTime12).join(', ')})` : ''
-    }`,
+    `- Store opening hours: each store's own hours${hours ? ` (stores open between ${formatTime12(hours.open)} and ${formatTime12(hours.close)})` : ''}`,
   );
+  lines.push(`- Content changes per day: ${draft.changesPerDay}, spread across each store's opening hours`);
 
   section('STORES');
   lines.push(`- ${stores.length} of ${STORES.length} stores selected`);
@@ -123,10 +120,11 @@ export function buildCampaignPrompt(draft: CampaignDraft): string {
   section('DEVICES');
   lines.push(`- ${plural(devices.length, 'device')} selected`);
   if (signage.length > 0) lines.push(`- Digital Signage: ${plural(signage.length, 'screen')}`);
-  if (esl.length > 0) {
-    lines.push(`- ESL: ${plural(esl.length, 'label group')} (${plural(eslLabels, 'label')})`);
+  if (hasEsl) {
+    // The label count depends on the products chosen later, so the prompt only states the rule.
+    lines.push('- ESL: the shelf labels of the campaign products update automatically, one per product per store');
   }
-  lines.push(`- Distinct formats requiring their own content (${formats.length}):`);
+  lines.push(`- Distinct screen formats requiring their own content (${formats.length}):`);
   if (formats.length === 0) lines.push('  - None');
   for (const format of formats) {
     lines.push(

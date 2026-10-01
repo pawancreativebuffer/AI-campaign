@@ -9,12 +9,11 @@ import {
 import {
   getAvailableDataTypes,
   isProductSlot,
-  getChangeTimes,
   getRequiredFormats,
+  getCampaignShelfLabels,
   getSelectedDevices,
   getSelectedStores,
   mediaIncludes,
-  timeToMinutes,
 } from './helpers';
 import { buildCampaignPrompt, sourceNeedsDetail } from './steps/promptBuilder';
 import type { CampaignDraft, StepErrors, ValidationCheck } from './types';
@@ -60,11 +59,6 @@ export function getStepErrors(step: number, draft: CampaignDraft): StepErrors {
         }
       }
       if (draft.activeDays.length === 0) errors.activeDays = 'Select at least one active day';
-      if (!draft.openingTime || !draft.closingTime) {
-        errors.openingHours = 'Store opening hours are required';
-      } else if (timeToMinutes(draft.closingTime) <= timeToMinutes(draft.openingTime)) {
-        errors.openingHours = 'Closing time must be after opening time';
-      }
       if (!Number.isInteger(draft.changesPerDay) || draft.changesPerDay < 1) {
         errors.changesPerDay = 'Enter at least one content change per day';
       } else if (mediaIncludes(draft.media, 'esl') && draft.changesPerDay > ESL_MAX_CHANGES_PER_DAY) {
@@ -86,12 +80,9 @@ export function getStepErrors(step: number, draft: CampaignDraft): StepErrors {
       break;
 
     case 5: {
-      const devices = getSelectedDevices(draft);
-      if (devices.length === 0) {
-        errors.deviceIds = 'Select at least one device';
-      } else if (draft.media === 'both') {
-        if (!devices.some(d => d.media === 'signage')) errors.deviceIds = 'Select at least one Digital Signage device';
-        else if (!devices.some(d => d.media === 'esl')) errors.deviceIds = 'Select at least one ESL device';
+      // Only screens are picked; ESL labels follow the campaign's products.
+      if (mediaIncludes(draft.media, 'signage') && getSelectedDevices(draft).length === 0) {
+        errors.deviceIds = 'Select at least one Digital Signage screen';
       }
       break;
     }
@@ -116,12 +107,14 @@ export function getStepErrors(step: number, draft: CampaignDraft): StepErrors {
         errors.productSource = `Select the ${draft.brief.productSource.toLowerCase()} to consider`;
       }
       if (draft.slots.length === 0) errors.slots = 'Add at least one slot';
-      if (
-        !Number.isInteger(draft.slotSeconds) ||
-        draft.slotSeconds < MIN_SLOT_SECONDS ||
-        draft.slotSeconds > MAX_SLOT_SECONDS
-      ) {
-        errors.slotSeconds = `Each slot must run between ${MIN_SLOT_SECONDS} and ${MAX_SLOT_SECONDS} seconds`;
+      if (draft.media !== 'esl') {
+        if (
+          !Number.isInteger(draft.slotSeconds) ||
+          draft.slotSeconds < MIN_SLOT_SECONDS ||
+          draft.slotSeconds > MAX_SLOT_SECONDS
+        ) {
+          errors.slotSeconds = `Each slot must run between ${MIN_SLOT_SECONDS} and ${MAX_SLOT_SECONDS} seconds`;
+        }
       }
       if (!draft.prompt.trim()) {
         errors.prompt = 'Generate the AI prompt before continuing';
@@ -175,27 +168,30 @@ function datesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string
  */
 export function runScheduleValidation(draft: CampaignDraft): ValidationCheck[] {
   const devices = getSelectedDevices(draft);
+  const labels = getCampaignShelfLabels(draft);
   const stores = getSelectedStores(draft);
-  const hasEsl = devices.some(d => d.media === 'esl');
+  const hasEsl = labels.length > 0;
 
-  // 1. Device availability
-  const unavailable = devices.filter(d => d.status !== 'Online');
+  // 1. Device availability: the selected screens and the campaign products' shelf labels.
+  const targets = [...devices.map(d => d.status), ...labels.map(l => l.status)];
+  const unavailableCount = targets.filter(status => status !== 'Online').length;
+  const offlineCount = targets.filter(status => status === 'Offline').length;
+  const totalDevices = devices.length + labels.length;
+  const what = `total ${totalDevices} devices (${devices.length} screen(s) + ${labels.length} shelf label(s))`;
   let deviceCheck: ValidationCheck;
-  if (devices.length === 0) {
-    deviceCheck = { id: 'devices', label: 'Device availability', status: 'fail', detail: 'No devices are selected.' };
-  } else if (unavailable.length === devices.length) {
-    deviceCheck = { id: 'devices', label: 'Device availability', status: 'fail', detail: 'None of the selected devices are online.' };
-  } else if (unavailable.length > 0) {
-    const offline = unavailable.filter(d => d.status === 'Offline').length;
-    const maintenance = unavailable.length - offline;
+  if (targets.length === 0) {
+    deviceCheck = { id: 'devices', label: 'Device availability', status: 'fail', detail: 'No screens are selected and no shelf labels will update.' };
+  } else if (unavailableCount === targets.length) {
+    deviceCheck = { id: 'devices', label: 'Device availability', status: 'fail', detail: `None of the ${what} are online.` };
+  } else if (unavailableCount > 0) {
     deviceCheck = {
       id: 'devices',
       label: 'Device availability',
       status: 'warning',
-      detail: `${unavailable.length} of ${devices.length} selected devices are unavailable (${offline} offline, ${maintenance} in maintenance). They will receive content when they come back online.`,
+      detail: `${unavailableCount} unavailable out of ${what} (${offlineCount} offline, ${unavailableCount - offlineCount} in maintenance). They will receive content when they come back online.`,
     };
   } else {
-    deviceCheck = { id: 'devices', label: 'Device availability', status: 'pass', detail: `All ${devices.length} selected devices are online.` };
+    deviceCheck = { id: 'devices', label: 'Device availability', status: 'pass', detail: `All ${what} are online.` };
   }
 
   // 2. Template compatibility: every slot has its design, and there are formats to render it for.
@@ -228,9 +224,12 @@ export function runScheduleValidation(draft: CampaignDraft): ValidationCheck[] {
     if (!draft.startDate || !draft.endDate) return null;
     if (!datesOverlap(draft.startDate, draft.endDate, existing.startDate, existing.endDate)) return null;
     const sharedStoreIds = new Set(stores.filter(s => existing.regions.includes(s.region)).map(s => s.id));
-    const sharedDevices = devices.filter(d => d.media === existing.media && sharedStoreIds.has(d.storeId));
-    if (sharedDevices.length === 0) return null;
-    return { existing, deviceCount: sharedDevices.length, storeCount: new Set(sharedDevices.map(d => d.storeId)).size };
+    const shared =
+      existing.media === 'esl'
+        ? labels.filter(l => sharedStoreIds.has(l.storeId)).map(l => l.storeId)
+        : devices.filter(d => d.media === 'signage' && sharedStoreIds.has(d.storeId)).map(d => d.storeId);
+    if (shared.length === 0) return null;
+    return { existing, deviceCount: shared.length, storeCount: new Set(shared).size };
   }).filter((c): c is NonNullable<typeof c> => c !== null);
 
   const eslConflicts = conflicts.filter(c => c.existing.media === 'esl');
@@ -242,7 +241,7 @@ export function runScheduleValidation(draft: CampaignDraft): ValidationCheck[] {
       id: 'conflicts',
       label: 'Scheduling conflicts',
       status: 'fail',
-      detail: `ESL devices are already scheduled in this period by ${describe(eslConflicts)}. Change the dates or remove those devices.`,
+      detail: `Shelf labels in these stores are already scheduled in this period by ${describe(eslConflicts)}. Change the dates or the stores.`,
     };
   } else if (conflicts.length > 0) {
     conflictCheck = {
@@ -258,7 +257,14 @@ export function runScheduleValidation(draft: CampaignDraft): ValidationCheck[] {
   // 4. ESL update limits: at most four changes per day, all within store opening hours.
   let eslCheck: ValidationCheck;
   if (!hasEsl) {
-    eslCheck = { id: 'eslLimits', label: 'ESL update limits', status: 'pass', detail: 'Not applicable - no ESL devices in this campaign.' };
+    eslCheck = {
+      id: 'eslLimits',
+      label: 'ESL update limits',
+      status: 'pass',
+      detail: mediaIncludes(draft.media, 'esl')
+        ? 'No shelf labels to update: none of the selected stores has an ESL label for the campaign products.'
+        : 'Not applicable - this campaign does not use ESL.',
+    };
   } else if (draft.changesPerDay > ESL_MAX_CHANGES_PER_DAY) {
     eslCheck = {
       id: 'eslLimits',
@@ -267,27 +273,13 @@ export function runScheduleValidation(draft: CampaignDraft): ValidationCheck[] {
       detail: `${draft.changesPerDay} content changes per day exceeds the ESL limit of ${ESL_MAX_CHANGES_PER_DAY}.`,
     };
   } else {
-    const changeMinutes = getChangeTimes(draft).map(timeToMinutes);
-    const eslStoreIds = new Set(devices.filter(d => d.media === 'esl').map(d => d.storeId));
-    const outsideHours = stores.filter(
-      s =>
-        eslStoreIds.has(s.id) &&
-        changeMinutes.some(t => t < timeToMinutes(s.openingTime) || t >= timeToMinutes(s.closingTime)),
-    );
-    eslCheck =
-      outsideHours.length > 0
-        ? {
-            id: 'eslLimits',
-            label: 'ESL update limits',
-            status: 'warning',
-            detail: `${draft.changesPerDay} change(s) per day is within the limit, but ${outsideHours.length} store(s) are closed at one or more change times. Those updates will apply when the store opens.`,
-          }
-        : {
-            id: 'eslLimits',
-            label: 'ESL update limits',
-            status: 'pass',
-            detail: `${draft.changesPerDay} change(s) per day, all within store opening hours.`,
-          };
+    // Change times follow each store's own opening hours, so they always fall while the store is open.
+    eslCheck = {
+      id: 'eslLimits',
+      label: 'ESL update limits',
+      status: 'pass',
+      detail: `${draft.changesPerDay} change(s) per day, within each store's own opening hours.`,
+    };
   }
 
   return [deviceCheck, templateCheck, conflictCheck, eslCheck];

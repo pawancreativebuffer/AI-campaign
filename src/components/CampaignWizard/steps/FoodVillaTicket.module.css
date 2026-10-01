@@ -571,3 +571,32 @@
   font-weight: 500;
   color: #a3a8b0;
 }
+
+/* ---- Demo Animations for Digital Signage (LCD) only ---- */
+.ticket:not(.esl) .swoosh {
+  animation: zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.ticket:not(.esl) .label {
+  animation: zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.1s both;
+}
+.ticket:not(.esl) .priceWrap {
+  animation: zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.2s both;
+}
+.ticket:not(.esl) .photo {
+  animation: zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.3s both;
+}
+.ticket:not(.esl) .desc,
+.ticket:not(.esl) .bar {
+  animation: zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.4s both;
+}
+
+@keyframes zoomSlideLeft {
+  from { 
+    transform: translateX(-40%) scale(0.6); 
+    opacity: 0; 
+  }
+  to { 
+    transform: translateX(0) scale(1); 
+    opacity: 1; 
+  }
+}

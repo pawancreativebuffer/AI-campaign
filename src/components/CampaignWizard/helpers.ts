@@ -2,6 +2,7 @@ import { DEVICES, ESL_COLOUR_LABELS, PRODUCT_CATALOG, STORES } from './mockData'
 import { LOGGED_IN_CLIENT_ID, getClientPack } from './clients';
 import { DATA_SOURCES, DEFAULT_SLOT_SECONDS, PRODUCT_SLOT_KINDS, SLOT_KINDS } from './options';
 import type {
+  ShelfLabel,
   CampaignBrief,
   CampaignDraft,
   CampaignSlot,
@@ -108,8 +109,6 @@ export function createEmptyDraft(): CampaignDraft {
     endDate: '',
     endTime: '',
     activeDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    openingTime: '08:00',
-    closingTime: '21:00',
     changesPerDay: 1,
     storeIds: [],
     media: '',
@@ -159,11 +158,73 @@ export function getSelectedStores(draft: CampaignDraft): Store[] {
   return draft.storeIds.map(id => STORE_BY_ID.get(id)).filter((s): s is Store => !!s);
 }
 
-/** Devices the user may pick from: those in the selected stores that match the selected media. */
+/**
+ * Screens the user may pick from: Digital Signage in the selected stores. ESL labels are not
+ * picked; they follow the campaign's products (see getCampaignShelfLabels).
+ */
 export function getAvailableDevices(draft: CampaignDraft): Device[] {
-  if (!draft.media) return [];
+  if (!mediaIncludes(draft.media, 'signage')) return [];
   const storeIds = new Set(draft.storeIds);
-  return DEVICES.filter(d => storeIds.has(d.storeId) && mediaIncludes(draft.media, d.media));
+  return DEVICES.filter(d => storeIds.has(d.storeId) && d.media === 'signage');
+}
+
+const ESL_GROUPS_BY_STORE = new Map<string, Device[]>();
+for (const device of DEVICES) {
+  if (device.media !== 'esl') continue;
+  ESL_GROUPS_BY_STORE.set(device.storeId, [...(ESL_GROUPS_BY_STORE.get(device.storeId) ?? []), device]);
+}
+
+/**
+ * The shelf label a store has for a product, or null when the store does not sell it.
+ * Mock: the label belongs to one of the store's ESL shelf areas, which sets its size and colour.
+ * In the real product this comes from the ESL system, where each label is linked to a SKU.
+ */
+export function getShelfLabel(storeId: string, sku: string): ShelfLabel | null {
+  const groups = ESL_GROUPS_BY_STORE.get(storeId);
+  if (!groups || groups.length === 0 || !isRangedInStore(sku, storeId)) return null;
+  let hash = 0;
+  for (const char of sku) hash = (hash * 31 + char.charCodeAt(0)) % 9973;
+  const group = groups[hash % groups.length];
+  return { storeId, sku, size: group.eslSize, colour: group.eslColour, location: group.location, status: group.status };
+}
+
+/** Labels that update in this campaign: every approved product's label in every selected store. */
+export function getCampaignShelfLabels(draft: CampaignDraft): ShelfLabel[] {
+  if (!mediaIncludes(draft.media, 'esl')) return [];
+  const skus = draft.products.filter(p => p.approved).map(p => p.sku);
+  return skus.flatMap(sku =>
+    draft.storeIds.map(storeId => getShelfLabel(storeId, sku)).filter((l): l is ShelfLabel => l !== null),
+  );
+}
+
+/** The labels of one product in the campaign's stores. */
+export function getProductShelfLabels(draft: CampaignDraft, sku: string): ShelfLabel[] {
+  if (!mediaIncludes(draft.media, 'esl') || !sku) return [];
+  return draft.storeIds.map(storeId => getShelfLabel(storeId, sku)).filter((l): l is ShelfLabel => l !== null);
+}
+
+function eslFormat(size: string, colour: string): ContentFormat {
+  return {
+    key: `esl|${size}|${colour}`,
+    media: 'esl',
+    label: `${size} ${ESL_COLOUR_LABELS[colour] ?? colour}`,
+    orientation: 'Landscape',
+    resolution: '',
+    eslSize: size,
+    eslColour: colour,
+    deviceCount: 0,
+  };
+}
+
+/** Distinct ESL label sizes among the given labels; deviceCount is the number of labels. */
+export function getLabelFormats(labels: ShelfLabel[]): ContentFormat[] {
+  const formats = new Map<string, ContentFormat>();
+  for (const label of labels) {
+    const format = formats.get(`esl|${label.size}|${label.colour}`) ?? eslFormat(label.size, label.colour);
+    format.deviceCount += 1;
+    formats.set(format.key, format);
+  }
+  return Array.from(formats.values()).sort((a, b) => a.key.localeCompare(b.key));
 }
 
 export function getSelectedDevices(draft: CampaignDraft): Device[] {
@@ -176,10 +237,15 @@ export function getFormatKey(device: Device): string {
     : `esl|${device.eslSize}|${device.eslColour}`;
 }
 
-/** Distinct media + format/size combinations across the selected devices. Each needs its own content. */
+/**
+ * Distinct media + format/size combinations: the selected screens' sizes, plus the label sizes of
+ * the campaign products' shelf labels. Each needs its own content.
+ */
 export function getRequiredFormats(draft: CampaignDraft): ContentFormat[] {
   const formats = new Map<string, ContentFormat>();
+  for (const format of getLabelFormats(getCampaignShelfLabels(draft))) formats.set(format.key, format);
   for (const device of getSelectedDevices(draft)) {
+    if (device.media !== 'signage') continue;
     const key = getFormatKey(device);
     const existing = formats.get(key);
     if (existing) {
@@ -214,14 +280,23 @@ export function minutesToTime(minutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-/** Content-change times, spread evenly across the campaign's store opening hours. */
-export function getChangeTimes(draft: CampaignDraft): string[] {
-  if (!draft.openingTime || !draft.closingTime || draft.changesPerDay < 1) return [];
-  const open = timeToMinutes(draft.openingTime);
-  const close = timeToMinutes(draft.closingTime);
+/** Content-change times spread evenly across opening hours, the first one at opening time. */
+export function getChangeTimes(changesPerDay: number, openingTime: string, closingTime: string): string[] {
+  if (!openingTime || !closingTime || changesPerDay < 1) return [];
+  const open = timeToMinutes(openingTime);
+  const close = timeToMinutes(closingTime);
   if (close <= open) return [];
-  const interval = (close - open) / draft.changesPerDay;
-  return Array.from({ length: draft.changesPerDay }, (_, i) => minutesToTime(open + interval * i));
+  const interval = (close - open) / changesPerDay;
+  return Array.from({ length: changesPerDay }, (_, i) => minutesToTime(open + interval * i));
+}
+
+/** Earliest opening and latest closing time across the selected stores, or null with no stores. */
+export function getStoreHoursRange(draft: CampaignDraft): { open: string; close: string } | null {
+  const stores = getSelectedStores(draft);
+  if (stores.length === 0) return null;
+  const open = stores.reduce((min, s) => (s.openingTime < min ? s.openingTime : min), stores[0].openingTime);
+  const close = stores.reduce((max, s) => (s.closingTime > max ? s.closingTime : max), stores[0].closingTime);
+  return { open, close };
 }
 
 export function formatTime12(time: string): string {

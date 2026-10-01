@@ -3,7 +3,7 @@ import styles from '../wizard.module.css';
 import local from './Step11Schedule.module.css';
 import { STORES } from '../mockData';
 import { WIZARD_STEPS } from '../options';
-import { formatDateTime, getLoopSeconds, getSelectedDevices, getSelectedStores } from '../helpers';
+import { formatDateTime, getCampaignShelfLabels, getLoopSeconds, getSelectedDevices, getSelectedStores } from '../helpers';
 import { getSlotOutputs } from './ticketContent';
 import { getClientPack } from '../clients';
 import { runScheduleValidation } from '../validation';
@@ -43,13 +43,12 @@ const Step11Schedule: React.FC<StepProps> = ({ draft, goToStep }) => {
   const outputs = getSlotOutputs(draft);
   const signageOutputs = outputs.filter(o => o.format.media === 'signage').length;
   const approvedCount = draft.products.filter(p => p.approved).length;
-  const signageCount = devices.filter(d => d.media === 'signage').length;
-  const eslCount = devices.length - signageCount;
+  const labelCount = getCampaignShelfLabels(draft).length;
 
   const start = formatDateTime(draft.startDate, draft.startTime) || '-';
   const finish = formatDateTime(draft.endDate, draft.endTime) || '-';
   const storesText = `${stores.length} of ${STORES.length}`;
-  const devicesText = `${devices.length} (${signageCount} Digital Signage, ${eslCount} ESL)`;
+  const devicesText = `${devices.length} screens, ${labelCount} ESL shelf labels`;
   const slotsText = `${draft.slots.length} x ${draft.slotSeconds} sec (${getLoopSeconds(draft)} sec loop)`;
   const outputsText = `${outputs.length} (${signageOutputs} Digital Signage, ${outputs.length - signageOutputs} ESL)`;
 
@@ -149,7 +148,7 @@ const Step11Schedule: React.FC<StepProps> = ({ draft, goToStep }) => {
                     </div>
                     <div className={local.checkDetail}>{check.detail}</div>
                   </div>
-                  {check.status === 'fail' && (
+                  {check.status === 'fail' ? (
                     <button
                       type="button"
                       className={`${styles.btnSmall} ${styles.btnSmallPink}`}
@@ -157,7 +156,15 @@ const Step11Schedule: React.FC<StepProps> = ({ draft, goToStep }) => {
                     >
                       Fix on {WIZARD_STEPS[fixStep - 1].label} <ArrowRightIcon size={14} />
                     </button>
-                  )}
+                  ) : check.status === 'warning' ? (
+                    <button
+                      type="button"
+                      className={styles.btnOutline}
+                      onClick={() => goToStep(fixStep)}
+                    >
+                      Review on {WIZARD_STEPS[fixStep - 1].label} <ArrowRightIcon size={14} />
+                    </button>
+                  ) : null}
                 </li>
               );
             })}

@@ -168,7 +168,7 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
   else if (usesProductFile && !brief.productFile) missing.push('product list file');
   else if (needsDetail && !brief.productSourceDetail) missing.push(brief.productSource.toLowerCase());
   if (draft.slots.length === 0) missing.push('campaign slots');
-  if (!isValidSlotSeconds(draft.slotSeconds)) missing.push('seconds per slot');
+  if (draft.media !== 'esl' && !isValidSlotSeconds(draft.slotSeconds)) missing.push('seconds per slot');
   if (!VALIDATION_ENABLED) missing.length = 0;
 
   const setBrief = (patch: Partial<CampaignBrief>) => update({ brief: { ...brief, ...patch } });
@@ -567,63 +567,69 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
 
       <div className={styles.panel}>
         <div className={styles.panelHeader}>
-          {panelTitle(5, 'Content required: campaign slots', true)}
+          {panelTitle(5, draft.media === 'esl' ? 'Content required: products to promote' : 'Content required: campaign slots', true)}
           <span className={styles.panelHeaderMeta}>
-            {draft.slots.length} slot{draft.slots.length === 1 ? '' : 's'}
+            {draft.slots.length} {draft.media === 'esl' ? `product${draft.slots.length === 1 ? '' : 's'}` : `slot${draft.slots.length === 1 ? '' : 's'}`}
           </span>
         </div>
         <div className={styles.panelBody}>
           <div className={styles.helpText} style={{ marginTop: 0, marginBottom: 14 }}>
-            The campaign runs as a loop of slots. Each slot is one piece of content shown for the same number of
-            seconds. You choose the product and design for each product slot on the next steps.
+            {draft.media === 'esl' 
+              ? 'Select how many products you want to promote. Each slot represents one product whose shelf label will be updated.'
+              : 'The campaign runs as a loop of slots. Each slot is one piece of content shown for the same number of seconds. You choose the product and design for each product slot on the next steps.'
+            }
           </div>
 
-          <div className={local.slotControls}>
-            <div className={local.secondsField}>
-              <label className={local.subLabel} htmlFor="brief-slot-seconds">
-                Seconds per slot <span className={styles.required}>*</span>
-              </label>
-              <input
-                id="brief-slot-seconds"
-                type="number"
-                min={MIN_SLOT_SECONDS}
-                max={MAX_SLOT_SECONDS}
-                step={1}
-                className={`${styles.input} ${local.secondsInput} ${showErrors && errors.slotSeconds ? styles.inputError : ''}`}
-                value={Number.isFinite(draft.slotSeconds) && draft.slotSeconds !== 0 ? draft.slotSeconds : ''}
-                onChange={e => update({ slotSeconds: e.target.value === '' ? 0 : Number(e.target.value) })}
-              />
-            </div>
-            <div className={local.presetField}>
-              <div className={local.subLabel}>Quick structures</div>
-              <div className={local.presetRow}>
-                {SLOT_PRESETS.map(preset => {
-                  const active = draft.slots.length === preset.slots && draft.slotSeconds === preset.seconds;
-                  return (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      className={`${styles.btnOutline} ${active ? local.presetActive : ''}`}
-                      aria-pressed={active}
-                      onClick={() => applyPreset(preset.slots, preset.seconds)}
-                    >
-                      {preset.label}
+          {draft.media !== 'esl' && (
+            <>
+              <div className={local.slotControls}>
+                <div className={local.secondsField}>
+                  <label className={local.subLabel} htmlFor="brief-slot-seconds">
+                    Seconds per slot <span className={styles.required}>*</span>
+                  </label>
+                  <input
+                    id="brief-slot-seconds"
+                    type="number"
+                    min={MIN_SLOT_SECONDS}
+                    max={MAX_SLOT_SECONDS}
+                    step={1}
+                    className={`${styles.input} ${local.secondsInput} ${showErrors && errors.slotSeconds ? styles.inputError : ''}`}
+                    value={Number.isFinite(draft.slotSeconds) && draft.slotSeconds !== 0 ? draft.slotSeconds : ''}
+                    onChange={e => update({ slotSeconds: e.target.value === '' ? 0 : Number(e.target.value) })}
+                  />
+                </div>
+                <div className={local.presetField}>
+                  <div className={local.subLabel}>Quick structures</div>
+                  <div className={local.presetRow}>
+                    {SLOT_PRESETS.map(preset => {
+                      const active = draft.slots.length === preset.slots && draft.slotSeconds === preset.seconds;
+                      return (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          className={`${styles.btnOutline} ${active ? local.presetActive : ''}`}
+                          aria-pressed={active}
+                          onClick={() => applyPreset(preset.slots, preset.seconds)}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                    <button type="button" className={styles.btnOutline} onClick={() => setSlots(createDefaultSlots())}>
+                      <RefreshIcon size={14} /> Use example structure
                     </button>
-                  );
-                })}
-                <button type="button" className={styles.btnOutline} onClick={() => setSlots(createDefaultSlots())}>
-                  <RefreshIcon size={14} /> Use example structure
-                </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          {showErrors && errors.slotSeconds ? (
-            <div className={styles.errorText}>{errors.slotSeconds}</div>
-          ) : (
-            <div className={styles.helpText}>
-              Between {MIN_SLOT_SECONDS} and {MAX_SLOT_SECONDS} seconds. The example structure is 5 product promotions,
-              1 loyalty advert, 1 seasonal greeting and 1 opening hours slot.
-            </div>
+              {showErrors && errors.slotSeconds ? (
+                <div className={styles.errorText}>{errors.slotSeconds}</div>
+              ) : (
+                <div className={styles.helpText}>
+                  Between {MIN_SLOT_SECONDS} and {MAX_SLOT_SECONDS} seconds. The example structure is 5 product promotions,
+                  1 loyalty advert, 1 seasonal greeting and 1 opening hours slot.
+                </div>
+              )}
+            </>
           )}
 
           {draft.slots.length > 0 && (
@@ -695,7 +701,7 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
           )}
           {showErrors && errors.slots && <div className={styles.errorText}>{errors.slots}</div>}
 
-          {draft.slots.length > 0 && (
+          {draft.slots.length > 0 && draft.media !== 'esl' && (
             <div className={local.slotSummary}>
               <strong>{describeSlotLoop(draft)} on Digital Signage</strong>
               <span>{slotBreakdown}</span>

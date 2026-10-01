@@ -1,6 +1,6 @@
 import { PRODUCT_BRANDS, PRODUCT_CATALOG, PRODUCT_CATEGORIES, PRODUCT_SUPPLIERS } from '../mockData';
 import { UPLOADED_PRODUCT_SOURCE } from '../options';
-import { formatCurrency, formatTime12, getChangeTimes, getStoreRanging, isProductSlot } from '../helpers';
+import { formatCurrency, getStoreRanging, isProductSlot } from '../helpers';
 import type { CampaignDraft, CampaignProduct, CatalogProduct } from '../types';
 
 const RECOMMENDATION_COUNT = 8;
@@ -264,9 +264,8 @@ function factorSentence(factor: string, product: CatalogProduct, draft: Campaign
     case 'Local events':
       return `Local events near the selected stores typically lift ${product.category} demand.`;
     case 'Time of day': {
-      const times = getChangeTimes(draft).map(formatTime12);
-      return times.length > 1
-        ? `Suits time-of-day scheduling across the ${times.length} daily content changes (${times.join(', ')}).`
+      return draft.changesPerDay > 1
+        ? `Suits time-of-day scheduling across the ${draft.changesPerDay} daily content changes.`
         : `${product.category} demand varies by time of day, which was taken into account.`;
     }
     default:

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { formatDateTime, getSelectedDevices, getSelectedStores, unique } from './helpers';
+import { formatDateTime, getCampaignShelfLabels, getSelectedDevices, getSelectedStores, unique } from './helpers';
 import type { CampaignDraft, CampaignStatus } from './types';
 
 // Campaigns created in the wizard, kept in sessionStorage so the campaign list can show them.
@@ -55,7 +55,10 @@ function toSavedCampaign(draft: CampaignDraft): SavedCampaign {
     id: draft.id,
     status: draft.status,
     contentName: draft.name,
-    screenGroup: unique(devices.map(d => (d.media === 'signage' ? d.resolution.replace('x', '*') : `ESL ${d.eslSize}`))).join(','),
+    screenGroup: unique([
+      ...devices.map(d => d.resolution.replace('x', '*')),
+      ...getCampaignShelfLabels(draft).map(l => `ESL ${l.size}`),
+    ]).join(','),
     tags: unique(stores.flatMap(s => s.tags)).join(','),
     region: unique(stores.map(s => s.region)).join(','),
     category: unique(stores.map(s => s.format)).join(','),

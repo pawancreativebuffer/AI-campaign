@@ -66,6 +66,19 @@ export interface CampaignProduct {
   source: 'ai' | 'manual';
 }
 
+/**
+ * An ESL shelf label. It sits under one product on the shelf and only ever shows that product,
+ * so labels are not picked by the user: every campaign product's label updates automatically.
+ */
+export interface ShelfLabel {
+  storeId: string;
+  sku: string;
+  size: string; // e.g. "300x400"
+  colour: string; // 'BW' | 'BWR' | 'BWRY'
+  location: string; // shelf area, e.g. "Liquor"
+  status: DeviceStatus;
+}
+
 /** One distinct output the campaign has to produce: a media type + format/size. */
 export interface ContentFormat {
   key: string;
@@ -147,8 +160,6 @@ export interface CampaignDraft {
   endDate: string;
   endTime: string;
   activeDays: string[];
-  openingTime: string;
-  closingTime: string;
   changesPerDay: number;
 
   // Screen 3

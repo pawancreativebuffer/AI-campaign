@@ -3,7 +3,16 @@ import styles from '../wizard.module.css';
 import css from './Step08Templates.module.css';
 import TicketPreview from './TicketPreview';
 import { defaultBody, defaultHeadline, getTicketContent } from './ticketContent';
-import { autoAssignSlots, getPixelSize, getRequiredFormats, isProductSlot } from '../helpers';
+import {
+  autoAssignSlots,
+  getLabelFormats,
+  getPixelSize,
+  getProductShelfLabels,
+  getRequiredFormats,
+  isProductSlot,
+  mediaIncludes,
+  getSelectedStores,
+} from '../helpers';
 import { getClientPack } from '../clients';
 import { isSlotComplete } from '../validation';
 import { AlertIcon, CheckIcon, SparkleIcon } from '../icons';
@@ -180,6 +189,7 @@ const Step08Templates: React.FC<StepProps> = ({ draft, update, errors, showError
             })}
           </div>
         </div>
+        {renderFormats(slot)}
       </>
     );
   };
@@ -233,14 +243,63 @@ const Step08Templates: React.FC<StepProps> = ({ draft, update, errors, showError
             draft design and will be replaced by the client&apos;s template once it is supplied.
           </div>
         </div>
+        {renderFormats(slot)}
       </>
+    );
+  };
+
+  const renderFormats = (slot: CampaignSlot) => {
+    const product = isProductSlot(slot.kind);
+    const productLabels = product ? getProductShelfLabels(draft, slot.productSku) : [];
+    const slotFormats = [...signageFormats, ...getLabelFormats(productLabels)];
+    const eslInCampaign = mediaIncludes(draft.media, 'esl');
+
+    // Calculate active store names for this product's labels
+    const labelStoreIds = new Set(productLabels.map(l => l.storeId));
+    const activeStores = getSelectedStores(draft).filter(s => labelStoreIds.has(s.id));
+    const activeStoreNames = activeStores.map(s => s.name).join(', ');
+
+    if (slotFormats.length === 0) return null;
+
+    return (
+      <div className={css.field} style={{ marginTop: '24px' }}>
+        <span className={styles.label}>Produced in {slotFormats.length} format(s)</span>
+        <div className={css.formatChips} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+          {slotFormats.map(f => {
+            const isEsl = f.media === 'esl';
+            return (
+              <span 
+                key={f.key} 
+                className={`${styles.badge} ${isEsl ? styles.badgeBlue : ''}`}
+              >
+                {mediaShort(f)} {f.label}
+              </span>
+            );
+          })}
+        </div>
+        {eslInCampaign && (
+          <div style={{ marginTop: '12px' }}>
+            {!product ? (
+              <p className={css.fieldHint}>Shelf labels only show products, so this slot is not shown on ESL.</p>
+            ) : !slot.productSku ? (
+              <p className={css.fieldHint}>Choose a product to see its shelf labels.</p>
+            ) : productLabels.length > 0 ? (
+              <div style={{ backgroundColor: '#eff6ff', borderLeft: '4px solid #3b82f6', padding: '10px 14px', borderRadius: '4px', color: '#1e40af', fontSize: '14px', fontWeight: '500' }}>
+                <span style={{ fontWeight: '700', marginRight: '4px' }}>Auto Price Update:</span> 
+                This product's shelf label will automatically update to the promo price in {productLabels.length} {productLabels.length === 1 ? 'store' : 'stores'} ({activeStoreNames}).
+              </div>
+            ) : (
+              <p className={css.fieldHint}>ESL: none of the selected stores has a shelf label for this product.</p>
+            )}
+          </div>
+        )}
+      </div>
     );
   };
 
   const renderPreview = (slot: CampaignSlot) => {
     const product = isProductSlot(slot.kind);
     const previewFormat = product ? productPreviewFormat : messagePreviewFormat;
-    const slotFormats = product ? formats : signageFormats;
 
     if (!previewFormat) {
       return (
@@ -261,14 +320,6 @@ const Step08Templates: React.FC<StepProps> = ({ draft, update, errors, showError
             format={previewFormat}
             displayWidth={fitWidth(previewFormat, 280, 360)}
           />
-        </div>
-        <span className={`${styles.label} ${css.formatsLabel}`}>Produced in {slotFormats.length} format(s)</span>
-        <div className={css.formatChips}>
-          {slotFormats.map(f => (
-            <span key={f.key} className={`${styles.badge} ${f.media === 'esl' ? styles.badgeBlue : ''}`}>
-              {mediaShort(f)} {f.label}
-            </span>
-          ))}
         </div>
       </>
     );

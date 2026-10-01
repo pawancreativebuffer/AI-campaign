@@ -1,5 +1,12 @@
 import { getClientPack } from '../clients';
-import { formatTime12, getRequiredFormats, isProductSlot } from '../helpers';
+import {
+  formatTime12,
+  getLabelFormats,
+  getProductShelfLabels,
+  getRequiredFormats,
+  getSelectedStores,
+  isProductSlot,
+} from '../helpers';
 import type { CampaignDraft, CampaignSlot, ContentFormat } from '../types';
 import type { TicketContent } from './FoodVillaTicket';
 
@@ -30,8 +37,11 @@ export function defaultHeadline(kind: string): string {
 }
 
 export function defaultBody(kind: string, draft: CampaignDraft): string {
-  if (kind === 'Opening hours' && draft.openingTime && draft.closingTime) {
-    return `${formatTime12(draft.openingTime)} - ${formatTime12(draft.closingTime)}, ${draft.activeDays.length === 7 ? 'every day' : draft.activeDays.join(', ')}`;
+  if (kind === 'Opening hours') {
+    // Each store shows its own hours; the preview uses the first selected store.
+    const store = getSelectedStores(draft)[0];
+    if (!store) return 'Open every day';
+    return `${formatTime12(store.openingTime)} - ${formatTime12(store.closingTime)}, ${draft.activeDays.length === 7 ? 'every day' : draft.activeDays.join(', ')}`;
   }
   if (kind === 'Seasonal greeting') return `From all of us at ${getClientPack(draft.clientId).name}`;
   return '';
@@ -72,13 +82,18 @@ export interface SlotOutput {
 }
 
 /**
- * Every piece of content to generate. Digital Signage plays every slot in turn;
- * an ESL label shows one product, so ESL formats only get the product slots.
+ * Every piece of content to generate. Digital Signage plays every slot in turn. An ESL label sits
+ * under one product and only shows that product, so each product slot gets one ESL ticket per
+ * size of its own product's labels.
  */
 export function getSlotOutputs(draft: CampaignDraft): SlotOutput[] {
-  return getRequiredFormats(draft).flatMap(format =>
-    draft.slots
-      .map((slot, i) => ({ slot, slotNumber: i + 1, format }))
-      .filter(({ slot }) => format.media === 'signage' || isProductSlot(slot.kind)),
+  const signage = getRequiredFormats(draft)
+    .filter(format => format.media === 'signage')
+    .flatMap(format => draft.slots.map((slot, i) => ({ slot, slotNumber: i + 1, format })));
+  const esl = draft.slots.flatMap((slot, i) =>
+    isProductSlot(slot.kind) && slot.productSku
+      ? getLabelFormats(getProductShelfLabels(draft, slot.productSku)).map(format => ({ slot, slotNumber: i + 1, format }))
+      : [],
   );
+  return [...signage, ...esl];
 }

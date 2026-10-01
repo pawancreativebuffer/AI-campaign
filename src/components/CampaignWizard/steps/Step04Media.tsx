@@ -52,30 +52,39 @@ const plural = (count: number, word: string) => `${word}${count === 1 ? '' : 's'
 const Step04Media: React.FC<StepProps> = ({ draft, update, errors, showErrors, goToStep }) => {
   const storeIds = new Set(draft.storeIds);
   let signageCount = 0;
-  let eslCount = 0;
+  const eslStoreIds = new Set<string>();
   for (const device of DEVICES) {
     if (!storeIds.has(device.storeId)) continue;
     if (device.media === 'signage') signageCount += 1;
-    else eslCount += 1;
+    else eslStoreIds.add(device.storeId);
   }
+  const eslStores = eslStoreIds.size;
   const storeCount = storeIds.size;
   const storesText = `${storeCount} selected ${plural(storeCount, 'store')}`;
 
+  const eslText = eslStores > 0 ? `Shelf labels in ${eslStores} of ${storeCount} stores` : 'No ESL in the selected stores';
   const renderCount = (value: Exclude<MediaChoice, ''>) => {
     if (value === 'both') {
       return (
         <>
-          <strong>{signageCount + eslCount}</strong> {plural(signageCount + eslCount, 'device')} in {storesText}
+          <strong>{signageCount}</strong> {plural(signageCount, 'screen')} in {storesText}
           <br />
-          {signageCount} Digital Signage + {eslCount} ESL
+          {eslText}, updated automatically
         </>
       );
     }
-    const count = value === 'signage' ? signageCount : eslCount;
-    const noun = value === 'signage' ? plural(count, 'screen') : `ESL ${plural(count, 'group')}`;
+    if (value === 'esl') {
+      return (
+        <>
+          {eslText}
+          <br />
+          Each campaign product&apos;s label updates automatically
+        </>
+      );
+    }
     return (
       <>
-        <strong>{count}</strong> {noun} in {storesText}
+        <strong>{signageCount}</strong> {plural(signageCount, 'screen')} in {storesText}
       </>
     );
   };
