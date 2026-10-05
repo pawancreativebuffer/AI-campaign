@@ -382,3 +382,16 @@
     grid-template-columns: 1fr;
   }
 }
+
+.mediaSelect {
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.mediaFixed {
+  width: 140px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 0 4px;
+}

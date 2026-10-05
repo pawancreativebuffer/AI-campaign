@@ -33,6 +33,7 @@ const plural = (count: number, word: string) => `${count} ${word}${count === 1 ?
 
 /** Name of the slot's design in the client's template pack. Message slots use the draft message design. */
 function designName(slot: CampaignSlot, clientId: string): string {
+  if (slot.kind === 'Retail Media') return 'Supplied artwork';
   if (!isProductSlot(slot.kind)) return 'Draft design';
   return slot.ticketType ? getDesignLabel(clientId, slot.ticketType) : 'No design';
 }
@@ -533,6 +534,8 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
                     <dl className={css.outputMeta}>
                       <dt>Design</dt>
                       <dd>{designName(slot, draft.clientId)}</dd>
+                      <dt>Media</dt>
+                      <dd>{format.media === 'esl' ? 'Static (ESL)' : slot.mediaType || 'Static'}</dd>
                       <dt>Format / size</dt>
                       <dd>{format.label}</dd>
                       <dt>{format.media === 'esl' ? 'Labels' : 'Screens'}</dt>

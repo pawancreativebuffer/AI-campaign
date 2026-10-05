@@ -24,6 +24,8 @@ export interface TicketContent {
   headline?: string; // message slots
   body?: string; // message slots
   endDate?: string; // already formatted, e.g. "Ends 08/11/26"
+  animated?: boolean; // the slot is produced as Animated; ESL never animates
+  asset?: { name: string; type: 'image' | 'video'; url: string }; // Retail Media: supplied artwork
 }
 
 export interface FoodVillaTicketProps {
@@ -711,7 +713,7 @@ const FoodVillaTicket: React.FC<FoodVillaTicketProps> = ({ content, width, heigh
   return (
     <div className={styles.outer} style={{ width: displayWidth, height: (displayWidth * H) / W }}>
       <div
-        className={`${styles.ticket} ${typeClass} ${esl ? styles.esl : ''} ${colourClass(eslColour)}`}
+        className={`${styles.ticket} ${typeClass} ${esl ? styles.esl : ''} ${content.animated && !esl ? styles.animated : ''} ${colourClass(eslColour)}`}
         style={{ width: W, height: H, transform: `scale(${scale})` }}
       >
         {inner}

@@ -1,7 +1,8 @@
-import { DEVICES, ESL_COLOUR_LABELS, PRODUCT_CATALOG, STORES } from './mockData';
+import { DAM_ASSETS, DEVICES, ESL_COLOUR_LABELS, PRODUCT_CATALOG, STORES } from './mockData';
 import { LOGGED_IN_CLIENT_ID, getClientPack } from './clients';
-import { DATA_SOURCES, DEFAULT_SLOT_SECONDS, PRODUCT_SLOT_KINDS, SLOT_KINDS } from './options';
+import { DATA_SOURCES, DEFAULT_SLOT_MEDIA, DEFAULT_SLOT_SECONDS, PRODUCT_SLOT_KINDS, RETAIL_MEDIA_KIND, SLOT_KINDS } from './options';
 import type {
+  DamAsset,
   ShelfLabel,
   CampaignBrief,
   CampaignDraft,
@@ -23,8 +24,14 @@ export function isProductSlot(kind: string): boolean {
 }
 
 export function createSlot(id: string, kind = 'Product promotion'): CampaignSlot {
-  return { id, kind, productSku: '', ticketType: '', headline: '', body: '' };
+  return { id, kind, productSku: '', ticketType: '', headline: '', body: '', mediaType: DEFAULT_SLOT_MEDIA, damAssetId: '' };
 }
+
+export function isRetailMediaSlot(kind: string): boolean {
+  return kind === RETAIL_MEDIA_KIND;
+}
+
+export const DAM_ASSET_BY_ID = new Map<string, DamAsset>(DAM_ASSETS.map(a => [a.id, a]));
 
 /** A slot id not used by any of the given slots. */
 export function nextSlotId(slots: CampaignSlot[]): string {

@@ -63,7 +63,8 @@ const Step11Schedule: React.FC<StepProps> = ({ draft, goToStep }) => {
           <p className={local.successText}>
             &quot;{draft.name}&quot; has been created and its status is now{' '}
             <span className={`${styles.badge} ${styles.badgeGreen}`}>Scheduled</span>. Content will be sent to the
-            selected devices when the campaign starts. The campaign can no longer be edited from this wizard.
+            selected devices when the campaign starts. To change it later, use the Edit button
+            next to the campaign on the campaign list.
           </p>
         </div>
 

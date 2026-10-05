@@ -1,11 +1,15 @@
+import { Suspense } from 'react';
 import Header from '@/components/Header';
-import CampaignWizard from '@/components/CampaignWizard/CampaignWizard';
+import WizardLoader from './WizardLoader';
 
 export default function IntelligentCampaignPage() {
   return (
     <main>
       <Header />
-      <CampaignWizard />
+      {/* useSearchParams (?edit=<id>) needs a Suspense boundary in the app router. */}
+      <Suspense fallback={null}>
+        <WizardLoader />
+      </Suspense>
     </main>
   );
 }

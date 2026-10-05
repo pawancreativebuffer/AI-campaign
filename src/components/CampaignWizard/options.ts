@@ -69,6 +69,8 @@ export const EXTERNAL_FACTORS = [
 ];
 
 /** What a slot shows. Product slots carry a product and a ticket design; the rest carry a message. */
+export const RETAIL_MEDIA_KIND = 'Retail Media';
+
 export const SLOT_KINDS = [
   'Product promotion',
   'Loyalty advert',
@@ -77,7 +79,20 @@ export const SLOT_KINDS = [
   'Store-wide offer',
   'Category promotion',
   'Brand advert',
+  RETAIL_MEDIA_KIND,
 ];
+
+/**
+ * What kind of media a slot is produced as (client: "Static, Animated, Video").
+ * ESL labels are always static.
+ */
+export const SLOT_MEDIA_TYPES = [
+  { value: 'Static', description: 'a still image (PNG)' },
+  { value: 'Animated', description: 'simple slide-level animation, like a PowerPoint slide' },
+  { value: 'Video', description: 'full animation, advertising quality' },
+];
+
+export const DEFAULT_SLOT_MEDIA = 'Static';
 
 export const PRODUCT_SLOT_KINDS = ['Product promotion', 'Loyalty advert'];
 

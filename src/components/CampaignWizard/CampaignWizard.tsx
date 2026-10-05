@@ -7,7 +7,7 @@ import { WIZARD_STEPS } from './options';
 import { applyDraftPatch, createEmptyDraft } from './helpers';
 import { VALIDATION_ENABLED, getStepErrors, runScheduleValidation } from './validation';
 import { saveCampaign } from './campaignStore';
-import { ArrowLeftIcon, ArrowRightIcon, CheckIcon } from './icons';
+import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, EditIcon } from './icons';
 import type { CampaignDraft, StepProps } from './types';
 import Step01CreateCampaign from './steps/Step01CreateCampaign';
 import Step02Schedule from './steps/Step02Schedule';
@@ -37,15 +37,29 @@ const STEP_COMPONENTS: Record<number, React.ComponentType<StepProps>> = {
 
 const LAST_STEP = WIZARD_STEPS.length;
 
-const CampaignWizard: React.FC = () => {
+interface CampaignWizardProps {
+  /** A saved campaign to edit. Every step is reachable and the wizard starts on step 1. */
+  initialDraft?: CampaignDraft;
+}
+
+const CampaignWizard: React.FC<CampaignWizardProps> = ({ initialDraft }) => {
   const router = useRouter();
-  const [draft, setDraft] = useState<CampaignDraft>(createEmptyDraft);
+  // While editing, the working copy is a Draft so every step can be changed; the saved status
+  // (Scheduled or Draft) stays in the campaign list until the campaign is scheduled again.
+  const [draft, setDraft] = useState<CampaignDraft>(() =>
+    initialDraft ? { ...initialDraft, status: 'Draft' } : createEmptyDraft(),
+  );
   const [step, setStep] = useState(1);
-  const [maxStep, setMaxStep] = useState(1);
+  const [maxStep, setMaxStep] = useState(initialDraft ? LAST_STEP : 1);
+  const isEditing = !!initialDraft;
+  // A scheduled campaign is only overwritten when it is scheduled again, never half-way on Next.
+  const saveOnNext = initialDraft?.status !== 'Scheduled';
   const [showErrors, setShowErrors] = useState(false);
   const [scheduleBlocked, setScheduleBlocked] = useState(false);
 
   const isScheduled = draft.status === 'Scheduled';
+  // The status in the campaign list: while editing, the edited campaign's until it is scheduled again.
+  const savedStatus = initialDraft && !isScheduled ? initialDraft.status : draft.status;
   const errors = useMemo(() => getStepErrors(step, draft), [step, draft]);
   const firstError = Object.values(errors)[0];
   // These problems are shown in red on the step itself, so Next stays disabled until they are fixed:
@@ -88,7 +102,7 @@ const CampaignWizard: React.FC = () => {
     // The campaign is saved as a Draft as soon as Screen 1 is complete.
     const saved = draft.id ? draft : { ...draft, id: `CMP-${Date.now()}` };
     if (saved !== draft) setDraft(saved);
-    saveCampaign(saved);
+    if (saveOnNext) saveCampaign(saved);
     setMaxStep(prev => Math.max(prev, step + 1));
     showStep(step + 1);
   };
@@ -115,7 +129,7 @@ const CampaignWizard: React.FC = () => {
   return (
     <div className={styles.page}>
       <div className={styles.breadcrumb}>
-        <span onClick={() => router.push('/')}>Content Management</span> / Create Campaign
+        <span onClick={() => router.push('/')}>Content Management</span> / {isEditing ? 'Edit Campaign' : 'Create Campaign'}
       </div>
 
       <div className={styles.pageHeader}>
@@ -124,11 +138,26 @@ const CampaignWizard: React.FC = () => {
         </button>
         <div className={styles.pageTitle}>{draft.name.trim() || 'Create Campaign'}</div>
         {draft.id && (
-          <span className={`${styles.badge} ${isScheduled ? styles.badgeGreen : styles.badgeAmber} ${styles.pageStatus}`}>
-            {draft.status}
+          <span className={`${styles.badge} ${savedStatus === 'Scheduled' ? styles.badgeGreen : styles.badgeAmber} ${styles.pageStatus}`}>
+            {savedStatus}
           </span>
         )}
+        {initialDraft && !isScheduled && (
+          <span className={`${styles.badge} ${styles.badgeBlue} ${styles.pageStatus}`}>Editing</span>
+        )}
       </div>
+
+      {initialDraft && !isScheduled && (
+        <div className={styles.alert} role="status">
+          <EditIcon />
+          <div>
+            <strong>Editing {initialDraft.name || initialDraft.id}</strong> (saved as {initialDraft.status}):{' '}
+            {saveOnNext
+              ? 'changes are saved as a Draft on each Next, and the campaign is scheduled when you create and schedule it.'
+              : 'changes are saved when you create and schedule again. Until then the scheduled campaign is not changed.'}
+          </div>
+        </div>
+      )}
 
       <div className={styles.wizard}>
         <div className={styles.wizardHeader}>

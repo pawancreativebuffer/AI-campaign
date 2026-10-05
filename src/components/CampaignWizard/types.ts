@@ -141,6 +141,18 @@ export interface CampaignSlot {
   ticketType: TicketType; // product slots only: the design chosen for this product, '' when not chosen
   headline: string; // message slots only, e.g. "Season's Greetings"
   body: string; // message slots only, e.g. opening hours text
+  mediaType: string; // SLOT_MEDIA_TYPES value: Static, Animated or Video
+  damAssetId: string; // Retail Media slots only: the supplied artwork from the DAM module
+}
+
+/** Finished artwork an external party (supplier, brand) delivered to the retailer, held in the DAM module. */
+export interface DamAsset {
+  id: string;
+  name: string;
+  supplier: string;
+  type: 'image' | 'video';
+  url: string;
+  orientation: Orientation;
 }
 
 export interface CampaignDraft {

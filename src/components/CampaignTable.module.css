@@ -178,6 +178,10 @@
   background-color: var(--btn-send);
 }
 
+.actionBtn.edit {
+  background-color: #2b2b36;
+}
+
 .actionBtn.delete {
   background-color: var(--primary-pink);
 }

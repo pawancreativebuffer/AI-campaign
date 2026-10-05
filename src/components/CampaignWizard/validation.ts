@@ -9,6 +9,7 @@ import {
 import {
   getAvailableDataTypes,
   isProductSlot,
+  isRetailMediaSlot,
   getRequiredFormats,
   getCampaignShelfLabels,
   getSelectedDevices,
@@ -28,6 +29,7 @@ export const VALIDATION_ENABLED = true;
 
 /** A product slot needs a product and a design; any other slot needs a headline. */
 export function isSlotComplete(slot: CampaignDraft['slots'][number]): boolean {
+  if (isRetailMediaSlot(slot.kind)) return !!slot.damAssetId;
   return isProductSlot(slot.kind) ? !!slot.productSku && !!slot.ticketType : slot.headline.trim() !== '';
 }
 
@@ -145,7 +147,7 @@ export function getStepErrors(step: number, draft: CampaignDraft): StepErrors {
       }
       const incomplete = producedSlots(draft).filter(slot => !isSlotComplete(slot));
       if (incomplete.length > 0) {
-        errors.slots = `Complete every slot (${incomplete.length} remaining): product slots need a product and a ticket design, other slots need a headline`;
+        errors.slots = `Complete every slot (${incomplete.length} remaining): product slots need a product and a design, Retail Media slots need artwork from the DAM, other slots need a headline`;
       }
       break;
     }

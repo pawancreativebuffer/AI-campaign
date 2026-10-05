@@ -14,6 +14,8 @@ export interface SavedCampaign {
   category: string;
   startDate: string;
   endDate: string;
+  /** The full wizard draft, used to edit the campaign and to build its proof-of-play report. */
+  draft?: CampaignDraft; // missing on campaigns saved before drafts were stored
 }
 
 const STORAGE_KEY = 'ticketit.wizardCampaigns';
@@ -64,6 +66,7 @@ function toSavedCampaign(draft: CampaignDraft): SavedCampaign {
     category: unique(stores.map(s => s.format)).join(','),
     startDate: formatDateTime(draft.startDate, draft.startTime),
     endDate: formatDateTime(draft.endDate, draft.endTime),
+    draft,
   };
 }
 
@@ -81,4 +84,18 @@ export function saveCampaign(draft: CampaignDraft) {
 
 export function useSavedCampaigns(): SavedCampaign[] {
   return useSyncExternalStore(subscribe, read, () => EMPTY);
+}
+
+function subscribeNothing() {
+  return () => {};
+}
+
+/**
+ * One saved campaign by id. `ready` is false on the server and during hydration (the server
+ * snapshot is always empty), so callers can wait for it before saying the campaign does not exist.
+ */
+export function useSavedCampaign(id: string): { ready: boolean; campaign: SavedCampaign | null } {
+  const list = useSavedCampaigns();
+  const ready = useSyncExternalStore(subscribeNothing, () => true, () => false);
+  return { ready, campaign: list.find(c => c.id === id) ?? null };
 }

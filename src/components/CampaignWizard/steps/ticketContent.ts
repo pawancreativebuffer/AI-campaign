@@ -6,6 +6,8 @@ import {
   getRequiredFormats,
   getSelectedStores,
   isProductSlot,
+  isRetailMediaSlot,
+  DAM_ASSET_BY_ID,
 } from '../helpers';
 import type { CampaignDraft, CampaignSlot, ContentFormat } from '../types';
 import type { TicketContent } from './FoodVillaTicket';
@@ -50,6 +52,16 @@ export function defaultBody(kind: string, draft: CampaignDraft): string {
 /** What the ticket for one slot shows: product and design for product slots, text for the rest. */
 export function getTicketContent(slot: CampaignSlot, draft: CampaignDraft): TicketContent {
   const endDate = formatEndDate(draft.endDate);
+  const animated = slot.mediaType === 'Animated';
+  if (isRetailMediaSlot(slot.kind)) {
+    const asset = DAM_ASSET_BY_ID.get(slot.damAssetId);
+    return {
+      kind: slot.kind,
+      ticketType: '',
+      headline: asset ? undefined : 'Choose artwork from the DAM',
+      asset: asset && { name: asset.name, type: asset.type, url: asset.url },
+    };
+  }
   if (!isProductSlot(slot.kind)) {
     return {
       kind: slot.kind,
@@ -57,6 +69,7 @@ export function getTicketContent(slot: CampaignSlot, draft: CampaignDraft): Tick
       headline: slot.headline || defaultHeadline(slot.kind),
       body: slot.body || defaultBody(slot.kind, draft),
       endDate,
+      animated,
     };
   }
   const product = draft.products.find(p => p.sku === slot.productSku);
@@ -64,6 +77,7 @@ export function getTicketContent(slot: CampaignSlot, draft: CampaignDraft): Tick
     kind: slot.kind,
     ticketType: slot.ticketType,
     endDate,
+    animated,
     product: product && {
       sku: product.sku,
       description: product.description,

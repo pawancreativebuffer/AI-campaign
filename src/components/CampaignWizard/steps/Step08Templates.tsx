@@ -12,8 +12,10 @@ import {
   isProductSlot,
   mediaIncludes,
   getSelectedStores,
+  isRetailMediaSlot,
 } from '../helpers';
 import { getClientPack } from '../clients';
+import { DAM_ASSETS } from '../mockData';
 import { isSlotComplete } from '../validation';
 import { AlertIcon, CheckIcon, SparkleIcon } from '../icons';
 import type { CampaignDraft, CampaignProduct, CampaignSlot, ContentFormat, StepProps } from '../types';
@@ -104,6 +106,7 @@ const Step08Templates: React.FC<StepProps> = ({ draft, update, errors, showError
   };
 
   const missingText = (slot: CampaignSlot): string => {
+    if (isRetailMediaSlot(slot.kind)) return 'Needs artwork from the DAM';
     if (!isProductSlot(slot.kind)) return 'Needs a headline';
     if (!slot.productSku && !slot.ticketType) return 'Needs a product and a design';
     if (!slot.productSku) return 'Needs a product';
@@ -193,6 +196,52 @@ const Step08Templates: React.FC<StepProps> = ({ draft, update, errors, showError
       </>
     );
   };
+
+  // Retail Media: artwork an external party already delivered, picked from the DAM module.
+  const renderRetailMediaControls = (slot: CampaignSlot, index: number) => (
+    <div className={css.field}>
+      <span className={styles.label}>
+        Artwork from the DAM <span className={styles.required}>*</span>
+      </span>
+      <p className={css.fieldHint}>
+        Finished media a supplier or brand delivered to the retailer. It runs exactly as supplied, so no design is chosen.
+      </p>
+      <div className={css.designGrid} role="radiogroup" aria-label={`DAM artwork for slot ${index + 1}`}>
+        {DAM_ASSETS.map(asset => {
+          const selected = slot.damAssetId === asset.id;
+          return (
+            <div key={asset.id} className={`${css.designCard} ${selected ? css.designCardSelected : ''}`}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                className={css.designSelect}
+                onClick={() =>
+                  updateSlot(index, { damAssetId: asset.id, mediaType: asset.type === 'video' ? 'Video' : 'Static' })
+                }
+              >
+                <span className={`${css.designThumb} ${css.damThumb}`}>
+                  {asset.type === 'video' ? (
+                    <video src={asset.url} muted loop autoPlay playsInline />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={asset.url} alt="" />
+                  )}
+                </span>
+                <span className={css.designName}>
+                  {selected && <CheckIcon size={14} />}
+                  {asset.name}
+                </span>
+                <span className={css.designDesc}>
+                  {asset.supplier} | {asset.type === 'video' ? 'Video' : 'Static'}
+                </span>
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   const renderMessageControls = (slot: CampaignSlot, index: number) => {
     const suggestedHeadline = defaultHeadline(slot.kind);
@@ -286,7 +335,7 @@ const Step08Templates: React.FC<StepProps> = ({ draft, update, errors, showError
             ) : productLabels.length > 0 ? (
               <div style={{ backgroundColor: '#eff6ff', borderLeft: '4px solid #3b82f6', padding: '10px 14px', borderRadius: '4px', color: '#1e40af', fontSize: '14px', fontWeight: '500' }}>
                 <span style={{ fontWeight: '700', marginRight: '4px' }}>Auto Price Update:</span> 
-                This product's shelf label will automatically update to the promo price in {productLabels.length} {productLabels.length === 1 ? 'store' : 'stores'} ({activeStoreNames}).
+                This product&apos;s shelf label will automatically update to the promo price in {productLabels.length} {productLabels.length === 1 ? 'store' : 'stores'} ({activeStoreNames}).
               </div>
             ) : (
               <p className={css.fieldHint}>ESL: none of the selected stores has a shelf label for this product.</p>
@@ -378,6 +427,11 @@ const Step08Templates: React.FC<StepProps> = ({ draft, update, errors, showError
                 <span>
                   Slot {index + 1}
                   <span className={css.slotKind}>{slot.kind}</span>
+                  {draft.media !== 'esl' && (
+                    <span className={`${styles.badge} ${css.mediaBadge}`}>
+                      {isRetailMediaSlot(slot.kind) && !slot.damAssetId ? 'Static or Video' : slot.mediaType || 'Static'}
+                    </span>
+                  )}
                 </span>
                 {complete ? (
                   <span className={`${styles.badge} ${styles.badgeGreen}`}>
@@ -391,7 +445,11 @@ const Step08Templates: React.FC<StepProps> = ({ draft, update, errors, showError
               </div>
               <div className={`${styles.panelBody} ${css.slotBody}`}>
                 <div className={css.slotControls}>
-                  {isProductSlot(slot.kind) ? renderProductControls(slot, index) : renderMessageControls(slot, index)}
+                  {isProductSlot(slot.kind)
+                    ? renderProductControls(slot, index)
+                    : isRetailMediaSlot(slot.kind)
+                      ? renderRetailMediaControls(slot, index)
+                      : renderMessageControls(slot, index)}
                 </div>
                 <div className={css.slotPreview}>{renderPreview(slot)}</div>
               </div>

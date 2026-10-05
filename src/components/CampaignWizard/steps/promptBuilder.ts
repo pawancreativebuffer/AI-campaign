@@ -136,7 +136,9 @@ export function buildCampaignPrompt(draft: CampaignDraft): string {
   lines.push(
     `- ${plural(draft.slots.length, 'slot')}, ${draft.slotSeconds} seconds each on Digital Signage (${draft.slots.length * draft.slotSeconds}-second loop)`,
   );
-  draft.slots.forEach((slot, i) => lines.push(`  - Slot ${i + 1}: ${slot.kind}`));
+  draft.slots.forEach((slot, i) =>
+    lines.push(`  - Slot ${i + 1}: ${slot.kind} (${slot.kind === 'Retail Media' ? 'supplied artwork from the DAM, do not change' : slot.mediaType})`),
+  );
   lines.push(
     `- Fill every product slot with a recommended product. Designs come only from the approved ${getClientPack(draft.clientId).name} ticket templates.`,
   );

@@ -1,4 +1,4 @@
-import type { CatalogProduct, Device, DeviceStatus, ExistingSchedule, Store } from './types';
+import type { CatalogProduct, DamAsset, Device, DeviceStatus, ExistingSchedule, Store } from './types';
 
 // Mock retail network. Everything is generated from the index so server and client render the same data.
 
@@ -151,6 +151,13 @@ export const PRODUCT_CATALOG: CatalogProduct[] = [
 export const PRODUCT_CATEGORIES = Array.from(new Set(PRODUCT_CATALOG.map(p => p.category)));
 export const PRODUCT_SUPPLIERS = Array.from(new Set(PRODUCT_CATALOG.map(p => p.supplier)));
 export const PRODUCT_BRANDS = Array.from(new Set(PRODUCT_CATALOG.map(p => p.brand)));
+
+// Retail Media in the DAM module: artwork suppliers and brands delivered ready to run.
+export const DAM_ASSETS: DamAsset[] = [
+  { id: 'DAM-101', name: 'Spring Wine Showcase', supplier: 'Marlborough Estates', type: 'image', url: '/promo_ticket_one.png', orientation: 'Landscape' },
+  { id: 'DAM-102', name: 'Summer Beer Range', supplier: 'Steam Wharf Brewing', type: 'image', url: '/promo_ticket_two.png', orientation: 'Landscape' },
+  { id: 'DAM-103', name: 'Brand Story 15 sec', supplier: 'Roast House Co', type: 'video', url: 'https://www.w3schools.com/html/mov_bbb.mp4', orientation: 'Landscape' },
+];
 
 // Campaigns already scheduled on the network, used for the scheduling-conflict check.
 export const EXISTING_SCHEDULES: ExistingSchedule[] = [

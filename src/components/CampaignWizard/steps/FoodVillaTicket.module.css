@@ -572,21 +572,25 @@
   color: #a3a8b0;
 }
 
-/* ---- Demo Animations for Digital Signage (LCD) only ---- */
-.ticket:not(.esl) .swoosh {
+/* ---- Animated slots on Digital Signage (LCD) only; Static slots do not move ---- */
+.animated {
+  --slot-animated: 1;
+}
+
+.ticket.animated:not(.esl) .swoosh {
   animation: zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1);
 }
-.ticket:not(.esl) .label {
+.ticket.animated:not(.esl) .label {
   animation: zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.1s both;
 }
-.ticket:not(.esl) .priceWrap {
+.ticket.animated:not(.esl) .priceWrap {
   animation: zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.2s both;
 }
-.ticket:not(.esl) .photo {
+.ticket.animated:not(.esl) .photo {
   animation: zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.3s both;
 }
-.ticket:not(.esl) .desc,
-.ticket:not(.esl) .bar {
+.ticket.animated:not(.esl) .desc,
+.ticket.animated:not(.esl) .bar {
   animation: zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.4s both;
 }
 

@@ -318,6 +318,7 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
                   <th>Kind</th>
                   <th>Product or headline</th>
                   <th>Design</th>
+                  <th>Media</th>
                   <th>Preview</th>
                 </tr>
               </thead>
@@ -326,10 +327,13 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
                   const content = getTicketContent(slot, draft);
                   const title = content.product
                     ? `${content.product.description} ${content.product.size}`
-                    : content.headline;
-                  const design = isProductSlot(slot.kind)
-                    ? slot.ticketType && getDesignLabel(draft.clientId, slot.ticketType)
-                    : 'Draft design';
+                    : content.asset?.name ?? content.headline;
+                  const retailMedia = slot.kind === 'Retail Media';
+                  const design = retailMedia
+                    ? content.asset && 'Supplied artwork'
+                    : isProductSlot(slot.kind)
+                      ? slot.ticketType && getDesignLabel(draft.clientId, slot.ticketType)
+                      : 'Draft design';
                   return (
                     <tr key={slot.id}>
                       <td className={styles.numeric}>{i + 1}</td>
@@ -344,6 +348,7 @@ const Step10Review: React.FC<StepProps> = ({ draft, goToStep }) => {
                       <td>
                         {design || <span className={`${styles.badge} ${styles.badgeRed}`}>Not selected</span>}
                       </td>
+                      <td>{draft.media === 'esl' ? 'Static (ESL)' : slot.mediaType || 'Static'}</td>
                       <td>
                         <SlotThumb slot={slot} draft={draft} formats={formats} />
                       </td>

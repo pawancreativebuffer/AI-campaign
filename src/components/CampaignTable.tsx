@@ -6,7 +6,7 @@ import styles from './CampaignTable.module.css';
 import CreateCampaignModal from './CreateCampaignModal';
 import CampaignContents from './CampaignContents';
 import CampaignDetail from './CampaignDetail';
-import { useSavedCampaigns } from './CampaignWizard/campaignStore';
+import { useSavedCampaigns, type SavedCampaign } from './CampaignWizard/campaignStore';
 
 // The modal flow is superseded by the step-by-step page at /intelligent-campaign.
 // Flip this to bring its button back.
@@ -78,6 +78,9 @@ const campaignsData = [
   },
 ];
 
+// A row of the campaign list: a mock campaign or a summary of one saved from the wizard.
+type CampaignRow = (typeof campaignsData)[number] | SavedCampaign;
+
 const SortIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M7 15l5 5 5-5"></path>
@@ -85,10 +88,10 @@ const SortIcon = () => (
   </svg>
 );
 
-const PlusIcon = () => (
+const ViewIcon = () => (
   <svg className={styles.actionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19"></line>
-    <line x1="5" y1="12" x2="19" y2="12"></line>
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
   </svg>
 );
 
@@ -97,6 +100,13 @@ const ChartIcon = () => (
     <line x1="18" y1="20" x2="18" y2="10"></line>
     <line x1="12" y1="20" x2="12" y2="4"></line>
     <line x1="6" y1="20" x2="6" y2="14"></line>
+  </svg>
+);
+
+const EditIcon = () => (
+  <svg className={styles.actionIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 20h9"></path>
+    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
   </svg>
 );
 
@@ -114,7 +124,7 @@ const CampaignTable = () => {
   const [campaigns, setCampaigns] = useState(campaignsData);
   const [isCreating, setIsCreating] = useState(false);
   const [currentView, setCurrentView] = useState<'table' | 'contents' | 'detail'>('table');
-  const [activeCampaign, setActiveCampaign] = useState<any>(null);
+  const [activeCampaign, setActiveCampaign] = useState<CampaignRow | null>(null);
 
   const handleCreateCampaign = () => {
     setIsModalOpen(false);
@@ -134,7 +144,7 @@ const CampaignTable = () => {
     }, 2500);
   };
 
-  const handleOpenContents = (campaign: any) => {
+  const handleOpenContents = (campaign: CampaignRow) => {
     setActiveCampaign(campaign);
     setCurrentView('contents');
   };
@@ -252,10 +262,37 @@ const CampaignTable = () => {
                 <td>{campaign.endDate}</td>
                 <td>
                   <div className={styles.actions}>
-                    <button className={`${styles.actionBtn} ${styles.add}`} onClick={() => handleOpenContents(campaign)}>
-                      <PlusIcon />
+                    <button
+                      className={`${styles.actionBtn} ${styles.add}`}
+                      onClick={() =>
+                        campaign.draft
+                          ? router.push(`/intelligent-campaign/view?id=${encodeURIComponent(campaign.id)}`)
+                          : handleOpenContents(campaign)
+                      }
+                      title="View campaign"
+                      aria-label={`View ${campaign.contentName}`}
+                    >
+                      <ViewIcon />
                     </button>
-                    <button className={`${styles.actionBtn} ${styles.stats}`}>
+                    <button
+                      className={`${styles.actionBtn} ${styles.edit}`}
+                      onClick={() =>
+                        // Campaigns saved before full drafts were kept cannot reopen in the wizard.
+                        campaign.draft
+                          ? router.push(`/intelligent-campaign?edit=${encodeURIComponent(campaign.id)}`)
+                          : handleOpenContents(campaign)
+                      }
+                      title="Edit campaign"
+                      aria-label={`Edit ${campaign.contentName}`}
+                    >
+                      <EditIcon />
+                    </button>
+                    <button
+                      className={`${styles.actionBtn} ${styles.stats}`}
+                      onClick={() => router.push(`/intelligent-campaign/report?id=${encodeURIComponent(campaign.id)}`)}
+                      title="Proof of play report"
+                      aria-label={`Proof of play report for ${campaign.contentName}`}
+                    >
                       <ChartIcon />
                     </button>
                     <button className={`${styles.actionBtn} ${styles.delete}`}>
@@ -276,8 +313,21 @@ const CampaignTable = () => {
                 <td>{campaign.endDate}</td>
                 <td>
                   <div className={styles.actions}>
-                    <button className={`${styles.actionBtn} ${styles.add}`} onClick={() => handleOpenContents(campaign)}>
-                      <PlusIcon />
+                    <button
+                      className={`${styles.actionBtn} ${styles.add}`}
+                      onClick={() => handleOpenContents(campaign)}
+                      title="View campaign"
+                      aria-label={`View ${campaign.contentName}`}
+                    >
+                      <ViewIcon />
+                    </button>
+                    <button
+                      className={`${styles.actionBtn} ${styles.edit}`}
+                      onClick={() => handleOpenContents(campaign)}
+                      title="Edit campaign"
+                      aria-label={`Edit ${campaign.contentName}`}
+                    >
+                      <EditIcon />
                     </button>
                     <button className={`${styles.actionBtn} ${styles.stats}`}>
                       <ChartIcon />

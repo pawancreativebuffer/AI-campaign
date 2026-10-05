@@ -14,6 +14,8 @@ import {
   SLOT_KINDS,
   SLOT_PRESETS,
   UPLOADED_PRODUCT_SOURCE,
+  DEFAULT_SLOT_MEDIA,
+  SLOT_MEDIA_TYPES,
 } from '../options';
 import { PRODUCT_BRANDS, PRODUCT_CATEGORIES, PRODUCT_SUPPLIERS } from '../mockData';
 import {
@@ -25,6 +27,7 @@ import {
   nextSlotId,
   slotKindsInUse,
   toggleValue,
+  isRetailMediaSlot,
 } from '../helpers';
 import { AlertIcon, CheckIcon, EditIcon, EyeIcon, PlusIcon, RefreshIcon, SparkleIcon, TrashIcon } from '../icons';
 import { VALIDATION_ENABLED } from '../validation';
@@ -632,10 +635,23 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
             </>
           )}
 
+          {draft.slots.length > 0 && draft.media !== 'esl' && (
+            <div className={styles.helpText} style={{ marginBottom: 10 }}>
+              Media:{' '}
+              {SLOT_MEDIA_TYPES.map((media, i) => (
+                <span key={media.value}>
+                  {i > 0 && ' | '}
+                  <strong>{media.value}</strong> = {media.description}
+                </span>
+              ))}
+              . Retail Media runs as supplied, so it is Static or Video depending on the file.
+            </div>
+          )}
           {draft.slots.length > 0 && (
             <ol className={local.slotList}>
               {draft.slots.map((slot, index) => {
                 const product = isProductSlot(slot.kind);
+                const retailMedia = isRetailMediaSlot(slot.kind);
                 return (
                   <li key={slot.id} className={local.slotRow}>
                     <span className={local.slotNumber}>{index + 1}</span>
@@ -651,8 +667,30 @@ const Step06Brief: React.FC<StepProps> = ({ draft, update, errors, showErrors })
                         </option>
                       ))}
                     </select>
-                    <span className={`${styles.badge} ${product ? styles.badgePink : styles.badgeBlue} ${local.slotBadge}`}>
-                      {product ? 'Product' : 'Message'}
+                    {draft.media !== 'esl' &&
+                      (retailMedia ? (
+                        <span className={local.mediaFixed} title="Set by the artwork chosen from the DAM on the Slots & Designs step">
+                          {slot.damAssetId ? slot.mediaType : 'Static or Video'}
+                        </span>
+                      ) : (
+                        <select
+                          className={`${styles.select} ${local.mediaSelect}`}
+                          value={slot.mediaType || DEFAULT_SLOT_MEDIA}
+                          aria-label={`Slot ${index + 1} media`}
+                          title={SLOT_MEDIA_TYPES.find(m => m.value === (slot.mediaType || DEFAULT_SLOT_MEDIA))?.description}
+                          onChange={e => setSlots(draft.slots.map((s, i) => (i === index ? { ...s, mediaType: e.target.value } : s)))}
+                        >
+                          {SLOT_MEDIA_TYPES.map(media => (
+                            <option key={media.value} value={media.value}>
+                              {media.value}
+                            </option>
+                          ))}
+                        </select>
+                      ))}
+                    <span
+                      className={`${styles.badge} ${product ? styles.badgePink : retailMedia ? styles.badgeAmber : styles.badgeBlue} ${local.slotBadge}`}
+                    >
+                      {product ? 'Product' : retailMedia ? 'From DAM' : 'Message'}
                     </span>
                     <div className={local.slotActions}>
                       <button
