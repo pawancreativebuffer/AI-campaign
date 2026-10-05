@@ -25,6 +25,7 @@ export interface TicketContent {
   body?: string; // message slots
   endDate?: string; // already formatted, e.g. "Ends 08/11/26"
   animated?: boolean; // the slot is produced as Animated; ESL never animates
+  video?: boolean; // Video slot: keeps moving in a loop for its whole slot (preview of the renderer's video)
   asset?: { name: string; type: 'image' | 'video'; url: string }; // Retail Media: supplied artwork
 }
 
@@ -201,19 +202,75 @@ function Barcode({ sku, style, vertical }: { sku: string; style: CSS; vertical?:
   return <div className={styles.barcode} style={{ ...style, backgroundImage: barcodeBackground(sku, vertical) }} />;
 }
 
+// Glass colours for the stand-in bottle; the real system uses the product photo from the catalogue.
+const GLASS = [
+  { dark: '#0f2e1a', mid: '#24603a', light: '#5f9c6f', cap: ['#7a0d0d', '#c42a2a'] }, // green wine / beer glass
+  { dark: '#3b1d05', mid: '#7a4210', light: '#c4823d', cap: ['#8a6a1c', '#e2c46a'] }, // amber beer glass
+  { dark: '#1b2733', mid: '#3d5468', light: '#8fa8bb', cap: ['#1d1d1d', '#5a5a5a'] }, // dark blue spirits glass
+];
+
+function glassFor(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return GLASS[h % GLASS.length];
+}
+
+/** Squeezes label text that would run off the label (SVG text does not wrap). */
+function fitText(text: string, charWidth: number, maxWidth: number) {
+  return text.length * charWidth > maxWidth ? { textLength: maxWidth, lengthAdjust: 'spacingAndGlyphs' } : {};
+}
+
 function PhotoPlaceholder({ name, style }: { name: string; style: CSS }) {
-  const letter = (name.trim()[0] ?? '?').toUpperCase();
+  const id = React.useId().replace(/:/g, '');
+  const glass = glassFor(name);
+  const words = name.trim().split(/\s+/);
+  const brand = (words[0] ?? '').slice(0, 9).toUpperCase();
+  const line2 = (words[1] ?? '').slice(0, 10).toUpperCase();
+  const body = 'M23 4 H37 V30 C37 38 52 44 52 60 V128 C52 134 48 138 42 138 H18 C12 138 8 134 8 128 V60 C8 44 23 38 23 30 Z';
   return (
     <div className={styles.photo} style={style}>
-      <svg className={styles.photoSvg} viewBox="0 0 60 140" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-        <path
-          d="M23 2 H37 V30 C37 38 52 44 52 60 V128 C52 134 48 138 42 138 H18 C12 138 8 134 8 128 V60 C8 44 23 38 23 30 Z"
-          className={styles.photoBottle}
-        />
-        <rect x="8" y="72" width="44" height="36" className={styles.photoLabel} />
-        <text x="30" y="98" textAnchor="middle" className={styles.photoLetter}>
-          {letter}
+      <svg className={styles.photoSvg} viewBox="0 0 60 146" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <defs>
+          <linearGradient id={`g${id}`} x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor={glass.dark} />
+            <stop offset="0.3" stopColor={glass.mid} />
+            <stop offset="0.45" stopColor={glass.light} />
+            <stop offset="0.7" stopColor={glass.mid} />
+            <stop offset="1" stopColor={glass.dark} />
+          </linearGradient>
+          <linearGradient id={`c${id}`} x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor={glass.cap[0]} />
+            <stop offset="0.45" stopColor={glass.cap[1]} />
+            <stop offset="1" stopColor={glass.cap[0]} />
+          </linearGradient>
+          <linearGradient id={`l${id}`} x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor="#d9cfb8" />
+            <stop offset="0.4" stopColor="#fbf6ea" />
+            <stop offset="1" stopColor="#d4c9b0" />
+          </linearGradient>
+          <radialGradient id={`s${id}`}>
+            <stop offset="0" stopColor="rgba(0,0,0,0.35)" />
+            <stop offset="1" stopColor="rgba(0,0,0,0)" />
+          </radialGradient>
+        </defs>
+        <ellipse cx="30" cy="140" rx="26" ry="4.5" fill={`url(#s${id})`} />
+        <path d={body} fill={`url(#g${id})`} />
+        {/* foil over the neck */}
+        <path d="M22.5 2 H37.5 V26 C37.5 28 36 29 34 29 H26 C24 29 22.5 28 22.5 26 Z" fill={`url(#c${id})`} />
+        <rect x="22.5" y="20" width="15" height="2" fill="rgba(255,255,255,0.35)" />
+        {/* label */}
+        <rect x="8" y="70" width="44" height="40" fill={`url(#l${id})`} />
+        <rect x="8" y="72" width="44" height="1.2" fill={glass.cap[0]} />
+        <rect x="8" y="106.8" width="44" height="1.2" fill={glass.cap[0]} />
+        <text x="30" y="88" textAnchor="middle" className={styles.photoBrand} fill={glass.cap[0]} {...fitText(brand, 5, 38)}>
+          {brand}
         </text>
+        <text x="30" y="97" textAnchor="middle" className={styles.photoSub} {...fitText(line2, 3.4, 34)}>
+          {line2}
+        </text>
+        {/* glass shine */}
+        <path d="M13.5 62 C13.5 54 18 48 21 46 V50 C18.5 52 16.5 56 16.5 62 V124 C16.5 126 15 127 13.5 126 Z" fill="rgba(255,255,255,0.45)" />
+        <rect x="44" y="64" width="2" height="60" rx="1" fill="rgba(255,255,255,0.18)" />
       </svg>
     </div>
   );
@@ -713,7 +770,7 @@ const FoodVillaTicket: React.FC<FoodVillaTicketProps> = ({ content, width, heigh
   return (
     <div className={styles.outer} style={{ width: displayWidth, height: (displayWidth * H) / W }}>
       <div
-        className={`${styles.ticket} ${typeClass} ${esl ? styles.esl : ''} ${content.animated && !esl ? styles.animated : ''} ${colourClass(eslColour)}`}
+        className={`${styles.ticket} ${typeClass} ${esl ? styles.esl : ''} ${content.animated && !esl ? styles.animated : ''} ${content.video && !esl ? styles.video : ''} ${colourClass(eslColour)}`}
         style={{ width: W, height: H, transform: `scale(${scale})` }}
       >
         {inner}

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import styles from '../CampaignWizard/wizard.module.css';
 import local from './CampaignView.module.css';
 import TicketPreview from '../CampaignWizard/steps/TicketPreview';
-import { getTicketContent } from '../CampaignWizard/steps/ticketContent';
+import { RENDERER_VIDEO_NOTE, getTicketContent, isRendererVideo } from '../CampaignWizard/steps/ticketContent';
 import { getClientPack, getDesignLabel } from '../CampaignWizard/clients';
 import {
   STORE_BY_ID,
@@ -153,6 +153,9 @@ const DevicePreview: React.FC<{ row: Row; draft: CampaignDraft }> = ({ row, draf
         <span className={local.sub}>
           {slot.kind} | {designOf(slot, draft)} | {fileType(slot, row.format)}
         </span>
+        {isScreen && isRendererVideo(slot) && (
+          <span className={`${styles.badge} ${styles.badgeAmber}`}>Video: {RENDERER_VIDEO_NOTE.toLowerCase()}</span>
+        )}
       </div>
 
       {isScreen ? (

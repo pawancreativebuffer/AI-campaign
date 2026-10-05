@@ -179,3 +179,31 @@
   margin-left: 10px;
   vertical-align: middle;
 }
+
+/* Video slots: the preview is the animated version; the real video comes from the renderer. */
+.videoNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #f5c26b;
+  border-left: 4px solid #e8a317;
+  border-radius: 8px;
+  background-color: #fff6e0;
+  color: #7a4b00;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.videoNote svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #e8a317;
+}
+
+.videoNote strong {
+  display: block;
+  color: #5c3800;
+  font-weight: 600;
+}

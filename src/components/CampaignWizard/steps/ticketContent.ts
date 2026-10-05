@@ -49,10 +49,21 @@ export function defaultBody(kind: string, draft: CampaignDraft): string {
   return '';
 }
 
+export const RENDERER_VIDEO_NOTE = 'Final video will be produced by the renderer';
+
+/**
+ * A designed slot (not DAM artwork) set to Video. The prototype cannot render video,
+ * so its preview plays the ticket in a moving loop and says the renderer makes the final video.
+ */
+export function isRendererVideo(slot: CampaignSlot): boolean {
+  return slot.mediaType === 'Video' && !isRetailMediaSlot(slot.kind);
+}
+
 /** What the ticket for one slot shows: product and design for product slots, text for the rest. */
 export function getTicketContent(slot: CampaignSlot, draft: CampaignDraft): TicketContent {
   const endDate = formatEndDate(draft.endDate);
-  const animated = slot.mediaType === 'Animated';
+  const video = isRendererVideo(slot);
+  const animated = slot.mediaType === 'Animated' || video;
   if (isRetailMediaSlot(slot.kind)) {
     const asset = DAM_ASSET_BY_ID.get(slot.damAssetId);
     return {
@@ -70,6 +81,7 @@ export function getTicketContent(slot: CampaignSlot, draft: CampaignDraft): Tick
       body: slot.body || defaultBody(slot.kind, draft),
       endDate,
       animated,
+      video,
     };
   }
   const product = draft.products.find(p => p.sku === slot.productSku);
@@ -78,6 +90,7 @@ export function getTicketContent(slot: CampaignSlot, draft: CampaignDraft): Tick
     ticketType: slot.ticketType,
     endDate,
     animated,
+    video,
     product: product && {
       sku: product.sku,
       description: product.description,

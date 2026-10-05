@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import styles from '../wizard.module.css';
 import css from './Step09Preview.module.css';
 import TicketPreview from './TicketPreview';
-import { getSlotOutputs, getTicketContent } from './ticketContent';
+import { RENDERER_VIDEO_NOTE, getSlotOutputs, getTicketContent, isRendererVideo } from './ticketContent';
 import type { SlotOutput } from './ticketContent';
 import { ESL_COLOUR_LABELS } from '../mockData';
 import { getClientPack, getDesignLabel } from '../clients';
@@ -160,6 +160,9 @@ const SignagePlayer = ({ draft, formats }: PlayerProps) => {
           <span className={styles.badge}>{slot.kind}</span>
           <span className={css.playerTitle}>{slotTitle(slot, draft)}</span>
           <span className={css.playerDesign}>{designName(slot, draft.clientId)}</span>
+          {isRendererVideo(slot) && (
+            <span className={`${styles.badge} ${styles.badgeAmber}`}>Video: {RENDERER_VIDEO_NOTE.toLowerCase()}</span>
+          )}
         </div>
 
         <div className={css.segments} aria-hidden="true">
@@ -535,7 +538,10 @@ const Step09Preview: React.FC<StepProps> = ({ draft, update, errors, showErrors,
                       <dt>Design</dt>
                       <dd>{designName(slot, draft.clientId)}</dd>
                       <dt>Media</dt>
-                      <dd>{format.media === 'esl' ? 'Static (ESL)' : slot.mediaType || 'Static'}</dd>
+                      <dd>
+                        {format.media === 'esl' ? 'Static (ESL)' : slot.mediaType || 'Static'}
+                        {format.media === 'signage' && isRendererVideo(slot) && ` (${RENDERER_VIDEO_NOTE.toLowerCase()})`}
+                      </dd>
                       <dt>Format / size</dt>
                       <dd>{format.label}</dd>
                       <dt>{format.media === 'esl' ? 'Labels' : 'Screens'}</dt>

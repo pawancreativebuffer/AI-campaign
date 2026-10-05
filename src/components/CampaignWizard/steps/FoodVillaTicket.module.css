@@ -378,20 +378,18 @@
   width: 100%;
 }
 
-.photoBottle {
-  fill: #fff;
-  stroke: #c3c7ce;
-  stroke-width: 2;
-}
-
-.photoLabel {
-  fill: #e5e7eb;
-}
-
-.photoLetter {
-  fill: #9ca3af;
-  font-size: 26px;
+.photoBrand {
+  font-size: 8px;
   font-weight: 800;
+  letter-spacing: 0.04em;
+  font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+}
+
+.photoSub {
+  fill: #6b6355;
+  font-size: 5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
 }
 
@@ -586,8 +584,9 @@
 .ticket.animated:not(.esl) .priceWrap {
   animation: zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.2s both;
 }
-.ticket.animated:not(.esl) .photo {
-  animation: zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.3s both;
+.ticket.animated:not(.esl) .photoSvg {
+  transform-origin: 50% 100%;
+  animation: bottleRise 0.9s cubic-bezier(0.22, 1.2, 0.36, 1) 0.3s both;
 }
 .ticket.animated:not(.esl) .desc,
 .ticket.animated:not(.esl) .bar {
@@ -602,5 +601,107 @@
   to { 
     transform: translateX(0) scale(1); 
     opacity: 1; 
+  }
+}
+
+/* ---- Video slots on Digital Signage: the entrance above, then the ticket keeps moving in a loop ---- */
+.video {
+  --slot-video: 1;
+}
+
+/* A light sweep crosses the ticket again and again. */
+.ticket.video:not(.esl)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0) 44%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0) 56%
+  );
+  background-size: 300% 100%;
+  animation: videoShine 2.8s ease-in-out 1s infinite both;
+}
+.ticket.video:not(.esl) .swoosh {
+  transform-origin: 0 0;
+  animation:
+    zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1),
+    videoSway 4s ease-in-out 0.7s infinite;
+}
+.ticket.video:not(.esl) .priceWrap,
+.ticket.video:not(.esl) .vcdBlock,
+.ticket.video:not(.esl) .messageHeadline {
+  animation:
+    zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.2s both,
+    videoPulse 1.6s ease-in-out 1s infinite;
+}
+.ticket.video:not(.esl) .photoSvg {
+  transform-origin: 50% 100%;
+  animation:
+    bottleRise 0.9s cubic-bezier(0.22, 1.2, 0.36, 1) 0.3s both,
+    videoFloat 3s ease-in-out 1.2s infinite;
+}
+.ticket.video:not(.esl) .messageMark {
+  animation:
+    zoomSlideLeft 0.7s cubic-bezier(0.25, 1, 0.5, 1) 0.3s both,
+    videoFloat 3s ease-in-out 1s infinite;
+}
+
+@keyframes bottleRise {
+  from {
+    transform: translateY(60%) scale(0.2);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes videoShine {
+  from {
+    background-position: 130% 0;
+  }
+  to {
+    background-position: -30% 0;
+  }
+}
+@keyframes videoSway {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04, 1.02);
+  }
+}
+@keyframes videoPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.07);
+  }
+}
+@keyframes videoFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket.video:not(.esl)::after,
+  .ticket.video:not(.esl) * {
+    animation: none !important;
   }
 }

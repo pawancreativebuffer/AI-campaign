@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import styles from '../wizard.module.css';
 import css from './Step08Templates.module.css';
 import TicketPreview from './TicketPreview';
-import { defaultBody, defaultHeadline, getTicketContent } from './ticketContent';
+import { RENDERER_VIDEO_NOTE, defaultBody, defaultHeadline, getTicketContent, isRendererVideo } from './ticketContent';
 import {
   autoAssignSlots,
   getLabelFormats,
@@ -370,6 +370,15 @@ const Step08Templates: React.FC<StepProps> = ({ draft, update, errors, showError
             displayWidth={fitWidth(previewFormat, 280, 360)}
           />
         </div>
+        {previewFormat.media === 'signage' && isRendererVideo(slot) && (
+          <div className={css.videoNote} role="note">
+            <SparkleIcon size={16} />
+            <div>
+              <strong>Video preview</strong>
+              <span>This moving preview shows how the video will look. {RENDERER_VIDEO_NOTE}.</span>
+            </div>
+          </div>
+        )}
       </>
     );
   };
